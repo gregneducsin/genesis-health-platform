@@ -63,11 +63,7 @@ export const APPROVED_REVIEW_URLS = new Set<string>([]);
  * duplicate is exactly how the old hardcoded Luma portal link in this same
  * topic went unnoticed for this long.
  */
-// TODO(user): Genesis Health's own patient-portal login URL — this is
-// Luma's, needed here only as a placeholder until Genesis's real one is
-// supplied. Lisa's portal_help topic and order-status messages reference
-// this constant, so updating it here updates both.
-export const APPROVED_PORTAL_URL = "https://TODO-genesis-portal-url.example.com/login";
+export const APPROVED_PORTAL_URL = "https://patient.trygenesis.com/login";
 
 export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   // ── Product comparison ─────────────────────────────────────────────────────

@@ -90,12 +90,12 @@ describe("supportPostCheck", () => {
   });
 
   it("still allows the approved portal URL echoed without its scheme", () => {
-    const result = check(reply({ reply: "You can check that in the portal: TODO-genesis-portal-url.example.com/login" }));
+    const result = check(reply({ reply: "You can check that in the portal: patient.trygenesis.com/login" }));
     expect(result.ok).toBe(true);
   });
 
   it("accepts the approved portal URL", () => {
-    const result = check(reply({ reply: "You can check that in the portal: https://TODO-genesis-portal-url.example.com/login" }));
+    const result = check(reply({ reply: "You can check that in the portal: https://patient.trygenesis.com/login" }));
     expect(result.ok).toBe(true);
   });
 

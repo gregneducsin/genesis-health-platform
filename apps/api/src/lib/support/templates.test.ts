@@ -5,7 +5,7 @@ describe("renderOrderReceivedMessage", () => {
   it("introduces Lisa and mentions the portal link", () => {
     const text = renderOrderReceivedMessage("Jamie");
     expect(text).toContain("this is Lisa");
-    expect(text).toContain("https://TODO-genesis-portal-url.example.com/login");
+    expect(text).toContain("https://patient.trygenesis.com/login");
   });
 
   it("interpolates the first name, falling back to 'there' when blank", () => {
