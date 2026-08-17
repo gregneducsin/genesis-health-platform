@@ -60,8 +60,11 @@ export const customerWithStatsSchema = customerSchema.extend({
   // which reflect the customer's full order history regardless of
   // classification.
   qualifyingPurchaseDate: z.string().nullable(),
-  // Most recent questionnaire_events row for this customer, if any.
+  // Most recent questionnaire_events row for this customer, if any — status
+  // and questionnaireId are the same row (paired by the same "most recent
+  // by lastEventAt" subquery), so they're always in sync with each other.
   questionnaireStatus: z.string().nullable(),
+  questionnaireId: z.string().nullable(),
 });
 export type CustomerWithStats = z.infer<typeof customerWithStatsSchema>;
 

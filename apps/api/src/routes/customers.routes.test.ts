@@ -209,6 +209,7 @@ describe("Customers CRUD", () => {
     expect(byQuestionnaireId.body.total).toBe(1);
     expect(byQuestionnaireId.body.customers[0].id).toBe(nonPurchaser.body.customer.id);
     expect(byQuestionnaireId.body.customers[0].questionnaireStatus).toBe("abandoned");
+    expect(byQuestionnaireId.body.customers[0].questionnaireId).toBe("Q-FILT-1");
 
     // A different questionnaire ID shouldn't match this customer's event.
     const byOtherQuestionnaireId = await agent.get("/api/app/customers").query({ leadType: "Referral Filter Test", questionnaireId: "Q-DOES-NOT-EXIST" });
