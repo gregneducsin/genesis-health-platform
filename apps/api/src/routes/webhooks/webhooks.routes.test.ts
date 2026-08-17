@@ -569,6 +569,53 @@ describe("Webhooks", () => {
         .where(eq(questionnaireEventsTable.personId, customer!.id));
       expect(event.lastEventAt!.getTime()).toBeGreaterThanOrEqual(before);
     });
+
+    describe("Bask's native { type, data } envelope", () => {
+      it("accepts a real abandonedSession delivery and treats it as status=abandoned", async () => {
+        const payload = {
+          type: "abandonedSession",
+          data: {
+            eventId: "bask-native-session-1",
+            externalPersonId: "bask-native-person-1",
+            email: "native-abandoned@example.com",
+            firstName: "Native",
+            lastName: "Envelope",
+            phone: "+15559990001",
+            questionnaireId: "QUEST-NATIVE-1",
+          },
+        };
+        const res = await request(app).post("/api/webhooks/bask-questionnaire").set("x-webhook-secret", QUESTIONNAIRE_SECRET).send(payload);
+        expect(res.status).toBe(200);
+
+        const { db, customersTable, questionnaireEventsTable } = await import("@luma/db");
+        const { eq } = await import("drizzle-orm");
+        const [customer] = await db.select().from(customersTable).where(eq(customersTable.email, "native-abandoned@example.com"));
+        expect(customer.phone).toBe("+15559990001");
+        const [event] = await db.select().from(questionnaireEventsTable).where(eq(questionnaireEventsTable.personId, customer!.id));
+        expect(event.status).toBe("abandoned");
+        expect(event.abandonedAt).not.toBeNull();
+      });
+
+      it("rejects an unrecognized native event type with 400 rather than guessing a status", async () => {
+        const payload = {
+          type: "somethingWeHaventSeenYet",
+          data: {
+            eventId: "bask-native-unknown-1",
+            externalPersonId: "bask-native-person-unknown",
+            email: "native-unknown@example.com",
+            questionnaireId: "QUEST-NATIVE-UNKNOWN",
+          },
+        };
+        const res = await request(app).post("/api/webhooks/bask-questionnaire").set("x-webhook-secret", QUESTIONNAIRE_SECRET).send(payload);
+        expect(res.status).toBe(400);
+      });
+
+      it("rejects a native envelope missing required data fields", async () => {
+        const payload = { type: "abandonedSession", data: { eventId: "bask-native-incomplete-1" } };
+        const res = await request(app).post("/api/webhooks/bask-questionnaire").set("x-webhook-secret", QUESTIONNAIRE_SECRET).send(payload);
+        expect(res.status).toBe(400);
+      });
+    });
   });
 
   describe("Bask payment-failed", () => {

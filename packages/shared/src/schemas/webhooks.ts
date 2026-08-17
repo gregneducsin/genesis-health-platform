@@ -63,6 +63,30 @@ export const baskQuestionnaireWebhookRequestSchema = z.object({
 });
 export type BaskQuestionnaireWebhookRequest = z.infer<typeof baskQuestionnaireWebhookRequestSchema>;
 
+/**
+ * Bask's own native webhook delivery (as opposed to a Zapier relay in
+ * front of Bask, which sends the flat shape above). Confirmed against a
+ * real Bask "Abandoned Session" webhook config on 2026-08-17 — unlike the
+ * Zapier relay, Bask's native webhooks always wrap fields in a
+ * `{ type, data }` envelope and carry no explicit status field; the event
+ * type IS the status, one native webhook per Bask event type. Only
+ * "abandonedSession" is confirmed so far — see
+ * BASK_NATIVE_QUESTIONNAIRE_EVENT_TYPE_TO_STATUS in bask-questionnaire.routes.ts.
+ */
+export const baskNativeQuestionnaireEnvelopeSchema = z.object({
+  type: z.string().min(1),
+  data: z.object({
+    eventId: z.string().min(1),
+    externalPersonId: z.string().min(1),
+    email: z.string().email(),
+    firstName: z.string().min(1).optional(),
+    lastName: z.string().min(1).optional(),
+    phone: z.string().min(1).optional(),
+    questionnaireId: z.string().min(1),
+  }),
+});
+export type BaskNativeQuestionnaireEnvelope = z.infer<typeof baskNativeQuestionnaireEnvelopeSchema>;
+
 // ── Bask payment-failed webhook ────────────────────────────────────────────────
 
 export const baskPaymentFailedWebhookRequestSchema = z.object({
