@@ -95,7 +95,7 @@ function SortHeader({
 }) {
   const active = sortBy === column;
   return (
-    <th className="px-6 py-4">
+    <th className="px-6 py-2">
       <button
         type="button"
         onClick={() => onSort(column)}
@@ -216,15 +216,13 @@ export function LeadsPage() {
             <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs font-medium uppercase text-gray-500">
               <tr>
                 <SortHeader label="Lead" column="lastName" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
-                <th className="px-6 py-4">Contact</th>
-                <th className="px-6 py-4">Lead type</th>
+                <th className="px-3 py-2">Contact</th>
+                <th className="px-3 py-2">Lead type</th>
                 <SortHeader label="Lead created" column="leadReceivedDate" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
-                <th className="px-6 py-4">Questionnaire / Funnel</th>
-                <th className="px-6 py-4">Purchase</th>
-                <th className="px-6 py-4">First purchase</th>
-                <th className="px-6 py-4">Days to purchase</th>
-                <th className="px-6 py-4">Orders</th>
-                <th className="px-6 py-4">Spent</th>
+                <th className="px-3 py-2">Questionnaire / Funnel</th>
+                <th className="px-3 py-2">Purchase</th>
+                <th className="px-3 py-2">First purchase</th>
+                <th className="px-3 py-2">Orders / Spent</th>
               </tr>
             </thead>
             <tbody>
@@ -232,21 +230,21 @@ export function LeadsPage() {
                 const daysToPurchase = daysBetween(c.leadReceivedDate, c.qualifyingPurchaseDate);
                 return (
                   <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-2">
                       <Link href={`/customers/${c.id}`} className="font-medium text-blue-600 hover:underline">
                         {c.firstName} {c.lastName}
                       </Link>
                       <div className="text-xs text-gray-400">{c.personNumber}</div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-3 py-2 text-gray-600">
                       <div>{c.email}</div>
                       {c.phone && <div className="text-xs text-gray-400">{c.phone}</div>}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-2">
                       <Badge color={LEAD_TYPE_BADGE_COLOR[c.leadType] ?? "gray"}>{c.leadType}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{c.leadReceivedDate}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-2 text-gray-600">{c.leadReceivedDate}</td>
+                    <td className="px-3 py-2">
                       {c.questionnaireStatus ? (
                         <div>
                           {c.questionnaireId && <div className="text-xs text-gray-600">{c.questionnaireId}</div>}
@@ -256,23 +254,27 @@ export function LeadsPage() {
                         <span className="text-xs text-gray-400">Not started</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-2">
                       {c.qualifyingPurchaseDate ? (
                         <Badge color="green">Purchased</Badge>
                       ) : (
                         <Badge color="gray">Not purchased</Badge>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{c.qualifyingPurchaseDate ?? "—"}</td>
-                    <td className="px-6 py-4 text-gray-600">{daysToPurchase !== null ? daysToPurchase : "—"}</td>
-                    <td className="px-6 py-4 text-gray-600">{c.purchaseCount}</td>
-                    <td className="px-6 py-4 text-gray-600">{formatMoney(c.totalPaid)}</td>
+                    <td className="px-3 py-2 text-gray-600">
+                      {c.qualifyingPurchaseDate ?? "—"}
+                      {daysToPurchase !== null && <div className="text-xs text-gray-400">{daysToPurchase} days</div>}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">
+                      {c.purchaseCount} order{c.purchaseCount === 1 ? "" : "s"}
+                      <div className="text-xs text-gray-400">{formatMoney(c.totalPaid)}</div>
+                    </td>
                   </tr>
                 );
               })}
               {data?.customers.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-6 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-400">
                     No leads found.
                   </td>
                 </tr>
