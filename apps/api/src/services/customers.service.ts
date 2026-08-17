@@ -173,6 +173,21 @@ export async function getCustomer(id: string) {
   return customer ?? null;
 }
 
+/** Every questionnaire this customer has an event for, most recently active first — answers "where did this lead come from." */
+export async function listQuestionnaireEventsForCustomer(personId: string) {
+  return db
+    .select({
+      questionnaireId: questionnaireEventsTable.questionnaireId,
+      status: questionnaireEventsTable.status,
+      startedAt: questionnaireEventsTable.startedAt,
+      abandonedAt: questionnaireEventsTable.abandonedAt,
+      lastEventAt: questionnaireEventsTable.lastEventAt,
+    })
+    .from(questionnaireEventsTable)
+    .where(eq(questionnaireEventsTable.personId, personId))
+    .orderBy(desc(questionnaireEventsTable.lastEventAt));
+}
+
 export async function createCustomer(input: CreateCustomerRequest) {
   const [customer] = await db
     .insert(customersTable)

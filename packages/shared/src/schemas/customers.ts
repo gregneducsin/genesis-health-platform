@@ -14,6 +14,15 @@ export const customerSchema = z.object({
 });
 export type Customer = z.infer<typeof customerSchema>;
 
+export const customerQuestionnaireEventSchema = z.object({
+  questionnaireId: z.string(),
+  status: z.string(),
+  startedAt: z.string().nullable(),
+  abandonedAt: z.string().nullable(),
+  lastEventAt: z.string(),
+});
+export type CustomerQuestionnaireEvent = z.infer<typeof customerQuestionnaireEventSchema>;
+
 export const createCustomerRequestSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
