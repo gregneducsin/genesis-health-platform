@@ -52,7 +52,7 @@ export const OBJECTION_LIBRARY: readonly ObjectionScript[] = [
     key: "price",
     rebuttal: {
       reply:
-        "Totally understand. With $20 off your first month, semaglutide starts at $100 and tirzepatide at $145. That includes provider review, medication, and shipping.",
+        "Totally understand. With $20 off your first month, semaglutide starts at $155 and tirzepatide at $205. That includes provider review, medication, and shipping.",
       nextQuestion: "Want to see the payment plan options?",
       requiredTopics: ["semaglutide_pricing", "tirzepatide_pricing", "first_month_offer"],
     },
@@ -104,8 +104,11 @@ export const OBJECTION_LIBRARY: readonly ObjectionScript[] = [
     key: "is_legit",
     rebuttal: {
       reply: "Fair question. We're a licensed telehealth provider, your info is handled under HIPAA, and a real provider reviews everything before anything moves forward.",
-      nextQuestion: "Want to see reviews from other customers?",
-      requiredTopics: ["privacy_hipaa", "customer_reviews"],
+      // Trimmed: no "want to see reviews" offer or review-link topic — this
+      // brand doesn't have review pages to point to yet. HIPAA/licensed-
+      // provider reassurance alone is the rebuttal.
+      nextQuestion: "Ready to go ahead and start the questionnaire?",
+      requiredTopics: ["privacy_hipaa"],
     },
     secondAttempt: {
       reply: "Totally understand the hesitation.",
@@ -187,7 +190,7 @@ export function getObjectionScript(key: ObjectionKey): ObjectionScript | undefin
  */
 export const AI_DISCLOSURE_SCRIPT: ObjectionStageScript & { readonly allowedParaphrase: false } = {
   reply:
-    "I'm an automated assistant here with the Luma Health team, and I'm here to help you get started. If you'd rather talk to a person, I can get one looped in.",
+    "I'm an automated assistant here with the Genesis Health team, and I'm here to help you get started. If you'd rather talk to a person, I can get one looped in.",
   nextQuestion: "Want me to go ahead and get you started on the questionnaire?",
   requiredTopics: [],
   allowedParaphrase: false,

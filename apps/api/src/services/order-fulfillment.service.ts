@@ -97,10 +97,14 @@ export async function handleOrderShipped(personId: string, trackingNumber: strin
     logger.warn({ personId }, "order-shipped notice not sent: no phone number on file");
   }
 
-  await db
-    .insert(reviewRequestTriggersTable)
-    .values({ personId, dueAt: new Date(Date.now() + REVIEW_REQUEST_DELAY_MS) })
-    .onConflictDoNothing({ target: reviewRequestTriggersTable.personId });
+  // Review-request trigger arming disabled for Genesis Health — no
+  // write-a-review link to offer yet (see APPROVED_REVIEW_WRITE_URL's
+  // comment in knowledge-catalog.ts). Re-enable this insert, and the sweep
+  // registration in index.ts, once Genesis has a real review link.
+  // await db
+  //   .insert(reviewRequestTriggersTable)
+  //   .values({ personId, dueAt: new Date(Date.now() + REVIEW_REQUEST_DELAY_MS) })
+  //   .onConflictDoNothing({ target: reviewRequestTriggersTable.personId });
 }
 
 export interface ReviewRequestSweepResult {

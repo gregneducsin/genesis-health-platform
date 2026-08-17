@@ -3,7 +3,8 @@ import { logger } from "./lib/logger.js";
 import { createApp } from "./app.js";
 import { sweepFollowUpJobs } from "./services/follow-up-jobs.service.js";
 import { sweepAbandonedCartTriggers } from "./services/abandoned-cart.service.js";
-import { sweepReviewRequestTriggers } from "./services/order-fulfillment.service.js";
+// sweepReviewRequestTriggers import removed — see the "Review-request sweep"
+// comment below for why it's not registered on an interval right now.
 import { sweepLeadCheckinTriggers } from "./services/lead-checkin.service.js";
 
 // Migrations are applied as a discrete step before this process starts (see
@@ -38,15 +39,11 @@ setInterval(() => {
   });
 }, ABANDONED_CART_SWEEP_INTERVAL_MS);
 
-// Review-request check-ins are due days out (see order-fulfillment.service.ts's
-// REVIEW_REQUEST_DELAY_MS), so a coarser tick than the abandoned-cart sweep
-// is plenty precise.
-const REVIEW_REQUEST_SWEEP_INTERVAL_MS = 30 * 60 * 1000;
-setInterval(() => {
-  sweepReviewRequestTriggers().catch((err) => {
-    logger.error({ err }, "review-request sweep failed");
-  });
-}, REVIEW_REQUEST_SWEEP_INTERVAL_MS);
+// Review-request sweep disabled for Genesis Health — handleOrderShipped no
+// longer arms these triggers either (no write-a-review link to offer yet;
+// see APPROVED_REVIEW_WRITE_URL's comment in knowledge-catalog.ts). Restore
+// this block and the import above, and un-comment the insert in
+// order-fulfillment.service.ts's handleOrderShipped, once a real link exists.
 
 // Lead check-ins are due 6 days out — same coarse tick as the review-request
 // sweep above is plenty precise for a delay measured in days.

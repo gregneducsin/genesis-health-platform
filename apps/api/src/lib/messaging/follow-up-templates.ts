@@ -17,7 +17,7 @@ export type FollowUpMessageStep = "provider_check_in" | "intake_questions_check_
 
 const TEMPLATES: Record<FollowUpMessageStep, (firstName: string) => string> = {
   provider_check_in: (firstName) =>
-    `Hey ${firstName}, this is Lucy with Luma Health. Should I go ahead and let the doctors know to look out for your completed questionnaire?`,
+    `Hey ${firstName}, this is Joy with Genesis Health. Should I go ahead and let the doctors know to look out for your completed questionnaire?`,
   intake_questions_check_in: (firstName) => `Hey ${firstName}, just checking in. Do you have any questions about the intake form?`,
 };
 
@@ -36,7 +36,7 @@ export function renderFollowUpMessage(step: FollowUpMessageStep, firstName: stri
  */
 export function renderAbandonedCartOpener(firstName: string): string {
   const name = firstName.trim() || "there";
-  return `Hi ${name}, this is Lucy with Luma Health. I noticed you started your online visit but didn't get a chance to finish it. Complete your enrollment now and get $20 off your first month. Want me to send the link to get started?`;
+  return `Hi ${name}, this is Joy with Genesis Health. I noticed you started your online visit but didn't get a chance to finish it. Complete your enrollment now and get $20 off your first month. Want me to send the link to get started?`;
 }
 
 /**
@@ -50,7 +50,7 @@ export function renderAbandonedCartOpener(firstName: string): string {
  */
 export function renderMetaLeadOpener(firstName: string): string {
   const name = firstName.trim() || "there";
-  return `Hey ${name}, this is Lucy with Luma Health. I wanted to check what state you're in to see what promotions we have running for you right now.`;
+  return `Hey ${name}, this is Joy with Genesis Health. I wanted to check what state you're in to see what promotions we have running for you right now.`;
 }
 
 /**
@@ -64,10 +64,10 @@ export function renderMetaLeadOpener(firstName: string): string {
  */
 export function renderCurrentlyTakingCheckin(firstName: string): string {
   const name = firstName.trim() || "there";
-  return `Hi ${name}, this is Lucy with Luma Health. Quick question — are you currently taking semaglutide or tirzepatide?`;
+  return `Hi ${name}, this is Joy with Genesis Health. Quick question — are you currently taking semaglutide or tirzepatide?`;
 }
 
 export function renderReengagementCheckin(firstName: string): string {
   const name = firstName.trim() || "there";
-  return `Hi ${name}, this is Lucy with Luma Health. Still thinking it over? What's the biggest thing holding you back from getting started?`;
+  return `Hi ${name}, this is Joy with Genesis Health. Still thinking it over? What's the biggest thing holding you back from getting started?`;
 }

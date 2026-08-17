@@ -24,7 +24,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ClaudeInteractiveResult, BotPreviewRequestBody } from "./types.js";
 import type { KnowledgeTopic } from "./knowledge-catalog.js";
-import { APPROVED_REVIEW_URLS } from "./knowledge-catalog.js";
 import { ClaudeInteractiveSchema } from "./safety.js";
 import { OBJECTION_LIBRARY, AI_DISCLOSURE_SCRIPT, type ObjectionScript } from "./objection-handling.js";
 
@@ -139,7 +138,7 @@ CONVERSATION GOALS (work through in this order, one question at a time — do no
 2. currentlyTaking: are they already on a GLP-1 medication like semaglutide or tirzepatide ("yes"/"no").
 3. selectedProduct: if currentlyTaking is "yes", ask which medication they're currently on. If "no",
    ask which one they're interested in. Either way the answer is "semaglutide" or "tirzepatide".
-4. wantsProcessExplanation: offer to explain how Luma Health's process works. Only ask this once
+4. wantsProcessExplanation: offer to explain how Genesis Health's process works. Only ask this once
    selectedProduct is known — don't explain the process before you know what they're considering.
 5. Once selectedProduct is known, proactively quote pricing for that product (use the approved pricing
    knowledge topic) and gauge their reaction — don't wait for them to ask. If they push back on price,
@@ -178,16 +177,16 @@ function buildSystemPrompt(body: BotPreviewRequestBody, knowledgeCatalog: readon
 
   const promoState = body.promoOffered
     ? "The $20-off first-month offer has already been mentioned this session. Set promoOffered:true on every remaining turn — the discount link is what gets sent. " +
-      "This also changes every 1-month price you quote from here on: semaglutide 1-month is $100 (not $120), tirzepatide 1-month is $145 (not $165). " +
-      "The 3-month and 6-month monthly/total figures are unaffected — the discount is only on the first month. " +
-      "If the patient asks the price directly, quote the discounted 1-month figure, not the plain one from the pricing topic — do not make them ask about the promo separately to get the real number."
+      "This also changes the month-to-month price you quote from here on: semaglutide month-to-month is $155 (not $175), tirzepatide month-to-month is $205 (not $225). " +
+      "The 3-month, 6-month, and 12-month monthly/total figures are unaffected — the discount is only on the first month. " +
+      "If the patient asks the price directly, quote the discounted month-to-month figure, not the plain one from the pricing topic — do not make them ask about the promo separately to get the real number."
     : "The $20-off first-month offer has not been mentioned yet. Only mention it via the first_month_offer knowledge topic, and only set promoOffered:true on the turn where you actually use it.";
 
   const knowledgeSection = buildKnowledgeSection(knowledgeCatalog);
   const objectionSection = buildObjectionSection(body.objectionStage);
 
   return `\
-You are Lucy, an automated assistant for Luma Health's weight-management outreach team.
+You are Joy, an automated assistant for Genesis Health's weight-management outreach team.
 You are already in an ongoing SMS text-message conversation with a potential patient.
 DO NOT re-introduce yourself. Never mention your own name again unless directly asked your identity.
 
@@ -248,9 +247,8 @@ nextQuestion exactly: "${AI_DISCLOSURE_SCRIPT.nextQuestion}"
 Never claim to be a human or a real person. Never claim to be a doctor, nurse, or any kind of medical provider.
 If the patient then insists on a human, use action "staff_review".
 ${knowledgeSection}
-APPROVED REVIEW SITES — Claude may output these two URLs verbatim, and only these:
-${[...APPROVED_REVIEW_URLS].map((u) => ` - ${u}`).join("\n")}
-Share both together when a patient asks about reviews or customer feedback. Do not volunteer unless asked.
+No review-site links are available yet. If a patient asks about reviews or customer feedback, do not invent
+a link — say there isn't one to share right now.
 
 SMS STYLE — reply like a friendly human texting, not a formal assistant:
  - Always use contractions: "don't", "it's", "we're", "you'll", "that's".

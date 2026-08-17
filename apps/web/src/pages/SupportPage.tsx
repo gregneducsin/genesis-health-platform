@@ -165,7 +165,7 @@ function SupportConversationDetailPanel({ conversationId }: { conversationId: st
             </div>
           </div>
         ))}
-        {sendMessage.isPending && <p className="text-sm text-gray-400">Sarah is thinking…</p>}
+        {sendMessage.isPending && <p className="text-sm text-gray-400">Lisa is thinking…</p>}
       </div>
 
       <form onSubmit={handleSubmit} className="border-t border-gray-200 p-3">
@@ -190,7 +190,7 @@ function SupportConversationDetailPanel({ conversationId }: { conversationId: st
           </p>
         )}
         {sendMessage.isSuccess && sendMessage.data.ok === false && (
-          <p className="mt-2 text-xs text-red-600">Sarah's reply was rejected by the guardrail ({sendMessage.data.code}) — nothing was sent.</p>
+          <p className="mt-2 text-xs text-red-600">Lisa's reply was rejected by the guardrail ({sendMessage.data.code}) — nothing was sent.</p>
         )}
       </form>
     </Card>

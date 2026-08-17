@@ -26,7 +26,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <nav className="flex items-center gap-4">
-            <span className="mr-2 text-sm font-semibold text-gray-900">Luma Health</span>
+            <span className="mr-2 text-sm font-semibold text-gray-900">Genesis Health</span>
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}

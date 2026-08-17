@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import { renderOrderReceivedMessage, renderPrescriptionWrittenMessage, renderOrderShippedMessage, renderReviewRequestMessage } from "./templates.js";
 
 describe("renderOrderReceivedMessage", () => {
-  it("introduces Sarah and mentions the portal link", () => {
+  it("introduces Lisa and mentions the portal link", () => {
     const text = renderOrderReceivedMessage("Jamie");
-    expect(text).toContain("this is Sarah");
-    expect(text).toContain("https://go.mylumahealth.com/login");
+    expect(text).toContain("this is Lisa");
+    expect(text).toContain("https://TODO-genesis-portal-url.example.com/login");
   });
 
   it("interpolates the first name, falling back to 'there' when blank", () => {

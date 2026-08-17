@@ -23,9 +23,9 @@ describe("renderFollowUpMessage", () => {
     });
   }
 
-  it("provider_check_in introduces Lucy by name and company", () => {
+  it("provider_check_in introduces Joy by name and company", () => {
     const text = renderFollowUpMessage("provider_check_in", "Jamie");
-    expect(text).toContain("this is Lucy with Luma Health");
+    expect(text).toContain("this is Joy with Genesis Health");
   });
 });
 

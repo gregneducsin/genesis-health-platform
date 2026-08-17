@@ -440,22 +440,42 @@ const INSURANCE_ACCEPTANCE_NEGATION_RE =
  */
 const INSURANCE_MENTION_RE = /\binsur(e|ance)\b/i;
 
-/** Dollar-amount pattern — only blocked when no approved pricing topic is used. */
-const DOLLAR_AMOUNT_RE = /\$\d+/;
-const DOLLAR_AMOUNT_GLOBAL_RE = /\$(\d+)/g;
+/**
+ * Dollar-amount pattern — only blocked when no approved pricing topic is used.
+ * Handles cents (e.g. "$116.67") and comma thousands-separators (e.g.
+ * "$1,100") — Genesis Health's plan prices use both, unlike Luma's original
+ * whole-dollar-only pricing, so a plain /\$\d+/ would either truncate a
+ * decimal price at the "." or truncate a 4-digit price at the first comma.
+ */
+const DOLLAR_AMOUNT_RE = /\$\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/;
+const DOLLAR_AMOUNT_GLOBAL_RE = /\$(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)/g;
+
+/** Strips comma thousands-separators so "$1,100" and "$1100" compare equal. */
+function normalizeDollarAmount(raw: string): string {
+  return raw.replace(/,/g, "");
+}
 
 /**
  * Every dollar figure that ever appears in approved pricing content: the two
- * product catalogs (semaglutide/tirzepatide, all plan lengths, monthly and
- * total), the $20 promo discount itself, and the two promo-adjusted 1-month
- * prices the prompt tells Claude to quote once promoOffered is true (see
- * provider.ts's promoState text). Declaring a pricing topic only proves
- * Claude cited *a* topic — it says nothing about whether the number it then
- * quotes is one of these. This closes that gap: once any pricing topic is
- * declared, every dollar amount in the reply must be a member of this set,
- * not just "a topic was mentioned somewhere."
+ * product catalogs (semaglutide/tirzepatide, all four plan lengths, monthly
+ * and total, plus the "save $X" figure each plan states), the $20 promo
+ * discount itself, and the two promo-adjusted month-to-month prices the
+ * prompt tells Claude to quote once promoOffered is true (see provider.ts's
+ * promoState text). Declaring a pricing topic only proves Claude cited *a*
+ * topic — it says nothing about whether the number it then quotes is one of
+ * these. This closes that gap: once any pricing topic is declared, every
+ * dollar amount in the reply must be a member of this set (compared after
+ * normalizeDollarAmount), not just "a topic was mentioned somewhere."
  */
-const APPROVED_DOLLAR_AMOUNTS = new Set(["20", "78", "80", "100", "120", "145", "147", "150", "165", "240", "450", "468", "882"]);
+const APPROVED_DOLLAR_AMOUNTS = new Set([
+  "20", // promo discount amount
+  // semaglutide: month-to-month, 3/6/12-month monthly + total + save
+  "175", "116.67", "350", "108.33", "650", "400", "91.67", "1100", "1000",
+  // tirzepatide: month-to-month, 3/6/12-month monthly + total + save
+  "225", "188.33", "565", "110", "1050", "300", "125", "1500", "1200",
+  // promo-adjusted month-to-month prices (promoState in provider.ts)
+  "155", "205",
+]);
 
 /**
  * The only approved promotional discount amount.
@@ -703,7 +723,7 @@ export function interactivePostCheck(
     if (hasPricingTopic) {
       DOLLAR_AMOUNT_GLOBAL_RE.lastIndex = 0;
       for (const match of reply.matchAll(DOLLAR_AMOUNT_GLOBAL_RE)) {
-        if (!APPROVED_DOLLAR_AMOUNTS.has(match[1])) {
+        if (!APPROVED_DOLLAR_AMOUNTS.has(normalizeDollarAmount(match[1]))) {
           return { ok: false, code: "UNSUPPORTED_PRICING_CLAIM" };
         }
       }

@@ -139,10 +139,11 @@ describe("interactivePostCheck: URLs", () => {
     expect(result).toEqual({ ok: false, code: "UNAPPROVED_URL" });
   });
 
-  it("still allows an approved URL echoed without its scheme", () => {
-    const result = check(reply({ reply: "Here you go: consumersverified.com/luma-health" }));
-    expect(result.ok).toBe(true);
-  });
+  // No positive "approved URL echoed without scheme" test here — Lucy has
+  // zero approved URLs right now (APPROVED_REVIEW_URLS is empty for Genesis
+  // Health; see its comment in knowledge-catalog.ts). The schemeless-match
+  // mechanism itself is still covered by the equivalent test in
+  // lib/support/safety.test.ts, which does have an approved URL to use.
 });
 
 // ── Post-check: unconditional clinical language ───────────────────────────────
@@ -209,7 +210,7 @@ describe("interactivePostCheck: pricing and financing claims", () => {
   });
 
   it("allows dollar amounts with a pricing topic declared", () => {
-    const result = check(reply({ reply: "That plan is $80 per month.", knowledgeTopicsUsed: ["semaglutide_pricing"] }));
+    const result = check(reply({ reply: "That plan is $116.67 per month.", knowledgeTopicsUsed: ["semaglutide_pricing"] }));
     expect(result.ok).toBe(true);
   });
 
@@ -225,11 +226,11 @@ describe("interactivePostCheck: pricing and financing claims", () => {
     expect(result).toEqual({ ok: false, code: "UNSUPPORTED_PRICING_CLAIM" });
   });
 
-  it("allows every real approved figure across both products, all plan lengths, and the promo-adjusted 1-month prices", () => {
+  it("allows every real approved figure across both products, all plan lengths, and the promo-adjusted month-to-month prices", () => {
     const approvedReplies = [
-      "Semaglutide is $120 for 1 month, $80 a month ($240 total) for 3 months, or $78 a month ($468 total) for 6 months.",
-      "Tirzepatide is $165 for 1 month, $150 a month ($450 total) for 3 months, or $147 a month ($882 total) for 6 months.",
-      "With $20 off, semaglutide is $100 and tirzepatide is $145 for the first month.",
+      "Semaglutide is $175 a month month-to-month, $116.67 a month ($350 total) for 3 months, $108.33 a month ($650 total) for 6 months, or $91.67 a month ($1,100 total) for 12 months.",
+      "Tirzepatide is $225 a month month-to-month, $188.33 a month ($565 total) for 3 months, $175 a month ($1,050 total) for 6 months, or $125 a month ($1,500 total) for 12 months.",
+      "With $20 off, semaglutide is $155 and tirzepatide is $205 for the first month.",
     ];
     for (const text of approvedReplies) {
       const result = check(reply({ reply: text, knowledgeTopicsUsed: ["semaglutide_pricing", "tirzepatide_pricing", "first_month_offer"] }));

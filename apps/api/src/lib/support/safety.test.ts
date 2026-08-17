@@ -90,28 +90,22 @@ describe("supportPostCheck", () => {
   });
 
   it("still allows the approved portal URL echoed without its scheme", () => {
-    const result = check(reply({ reply: "You can check that in the portal: go.mylumahealth.com/login" }));
+    const result = check(reply({ reply: "You can check that in the portal: TODO-genesis-portal-url.example.com/login" }));
     expect(result.ok).toBe(true);
   });
 
   it("accepts the approved portal URL", () => {
-    const result = check(reply({ reply: "You can check that in the portal: https://go.mylumahealth.com/login" }));
+    const result = check(reply({ reply: "You can check that in the portal: https://TODO-genesis-portal-url.example.com/login" }));
     expect(result.ok).toBe(true);
   });
 
-  it("accepts the approved write-a-review URL, even though its query string contains a '?'", () => {
-    const result = check(
-      reply({ reply: "We'd love it if you left a review: https://www.consumeraffairs.com/review/write/?brand_id=27277" }),
-    );
-    expect(result.ok).toBe(true);
-  });
-
-  it("still rejects a genuine clarifying question mark alongside an approved URL with a query string", () => {
-    const result = check(
-      reply({ reply: "Would you leave a review? Here's the link: https://www.consumeraffairs.com/review/write/?brand_id=27277" }),
-    );
-    expect(result).toEqual({ ok: false, code: "QUESTION_MARK_IN_REPLY" });
-  });
+  // No write-a-review URL tests here — APPROVED_REVIEW_WRITE_URL is empty
+  // for Genesis Health (the whole review-request flow is disabled; see its
+  // comment in knowledge-catalog.ts). The "?" stripped from an approved
+  // URL's own query string, vs. a genuine clarifying "?" elsewhere in reply,
+  // isn't independently testable right now since no approved URL currently
+  // has a query string — restore these once a real write-a-review link
+  // (with its own query string) is back in use.
 
   it("rejects a question mark inside reply", () => {
     const result = check(reply({ reply: "Do you want me to check on that?" }));

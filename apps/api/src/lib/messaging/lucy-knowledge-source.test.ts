@@ -9,8 +9,8 @@
  * LK-06  No omitted sections
  * LK-07  No added sections
  * LK-08  All 17 expected sections are present by name
- * LK-09  Semaglutide pricing values match the Lucy document exactly
- * LK-10  Tirzepatide pricing values match the Lucy document exactly
+ * LK-09  Semaglutide pricing values match Genesis Health's approved pricing
+ * LK-10  Tirzepatide pricing values match Genesis Health's approved pricing
  * LK-11  Tirzepatide dose progression string matches the Lucy document
  * LK-12  Semaglutide dose progression string matches the Lucy document
  * LK-13  Approved comparison language (tirzepatide > semaglutide) is in the catalog
@@ -101,60 +101,81 @@ describe("LK-08: all 17 expected section names are present", () => {
 });
 
 // ── LK-09..LK-10: Exact pricing values ───────────────────────────────────────
+// Genesis Health's own pricing (owner-supplied 2026-08-17, from Genesis's
+// transparent-pricing page) — no longer the lucy-knowledge-v1 values, so
+// these check against Genesis's numbers instead of "matching the Lucy
+// document" (see LUCY_V1_TOPIC_KEYS's comment for why these two topics are
+// exempt from the document-consistency checks elsewhere in this file).
 
-describe("LK-09: semaglutide pricing values match the Lucy document exactly", () => {
+describe("LK-09: semaglutide pricing values match Genesis Health's approved pricing", () => {
   const topic = getTopicByKey("semaglutide_pricing");
 
   it("topic exists in the catalog", () => {
     expect(topic).toBeDefined();
   });
 
-  it("1-month price is $120", () => {
-    expect(topic?.approvedText).toContain("$120");
+  it("month-to-month price is $175", () => {
+    expect(topic?.approvedText).toContain("$175 per month");
   });
 
-  it("3-month price is $80 per month", () => {
-    expect(topic?.approvedText).toContain("$80 per month");
+  it("3-month price is $116.67 per month", () => {
+    expect(topic?.approvedText).toContain("$116.67 per month");
   });
 
-  it("3-month total is $240", () => {
-    expect(topic?.approvedText).toContain("$240 total");
+  it("3-month total is $350", () => {
+    expect(topic?.approvedText).toContain("$350 billed every 3 months");
   });
 
-  it("6-month price is $78 per month", () => {
-    expect(topic?.approvedText).toContain("$78 per month");
+  it("6-month price is $108.33 per month", () => {
+    expect(topic?.approvedText).toContain("$108.33 per month");
   });
 
-  it("6-month total is $468", () => {
-    expect(topic?.approvedText).toContain("$468 total");
+  it("6-month total is $650", () => {
+    expect(topic?.approvedText).toContain("$650 billed every 6 months");
+  });
+
+  it("12-month price is $91.67 per month", () => {
+    expect(topic?.approvedText).toContain("$91.67 per month");
+  });
+
+  it("12-month total is $1,100", () => {
+    expect(topic?.approvedText).toContain("$1,100 billed annually");
   });
 });
 
-describe("LK-10: tirzepatide pricing values match the Lucy document exactly", () => {
+describe("LK-10: tirzepatide pricing values match Genesis Health's approved pricing", () => {
   const topic = getTopicByKey("tirzepatide_pricing");
 
   it("topic exists in the catalog", () => {
     expect(topic).toBeDefined();
   });
 
-  it("1-month price is $165", () => {
-    expect(topic?.approvedText).toContain("$165");
+  it("month-to-month price is $225", () => {
+    expect(topic?.approvedText).toContain("$225 per month");
   });
 
-  it("3-month price is $150 per month", () => {
-    expect(topic?.approvedText).toContain("$150 per month");
+  it("3-month price is $188.33 per month", () => {
+    expect(topic?.approvedText).toContain("$188.33 per month");
   });
 
-  it("3-month total is $450", () => {
-    expect(topic?.approvedText).toContain("$450 total");
+  it("3-month total is $565", () => {
+    expect(topic?.approvedText).toContain("$565 billed every 3 months");
   });
 
-  it("6-month price is $147 per month", () => {
-    expect(topic?.approvedText).toContain("$147 per month");
+  it("6-month price is $175 per month", () => {
+    expect(topic?.approvedText).toContain("$175 per month");
   });
 
-  it("6-month total is $882", () => {
-    expect(topic?.approvedText).toContain("$882 total");
+  it("6-month total is $1,050", () => {
+    expect(topic?.approvedText).toContain("$1,050 billed every 6 months");
+  });
+
+  it("12-month price is $125 per month", () => {
+    expect(topic?.approvedText).toContain("$125 per month");
+  });
+
+  it("12-month total is $1,500", () => {
+    expect(topic?.approvedText).toContain("$1,500 billed annually");
   });
 });
 

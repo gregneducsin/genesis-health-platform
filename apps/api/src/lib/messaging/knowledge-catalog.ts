@@ -49,10 +49,25 @@ export interface KnowledgeTopic {
  * never sees a real token to output. On action=send_form, Claude's reply
  * must contain no URL at all — the caller appends the freshly minted link.
  */
-export const APPROVED_REVIEW_URLS = new Set([
-  "https://www.consumeraffairs.com/health/luma-health.html",
-  "https://consumersverified.com/luma-health",
-]);
+// Empty for Genesis Health — no review-platform links approved yet (see the
+// customer_reviews topic's comment). Both bots' URL allowlists include this
+// set, so it stays as the single place to add real links once they exist,
+// rather than being deleted and re-threaded through both safety.ts files.
+export const APPROVED_REVIEW_URLS = new Set<string>([]);
+
+/**
+ * The fixed approved patient-portal login URL — the Sarah/Lisa equivalent of
+ * APPROVED_REVIEW_URLS. Lisa may output this verbatim; Joy never does.
+ * Declared here (above KNOWLEDGE_CATALOG) so portal_help's approvedText
+ * below can reference it directly instead of duplicating the URL — a
+ * duplicate is exactly how the old hardcoded Luma portal link in this same
+ * topic went unnoticed for this long.
+ */
+// TODO(user): Genesis Health's own patient-portal login URL — this is
+// Luma's, needed here only as a placeholder until Genesis's real one is
+// supplied. Lisa's portal_help topic and order-status messages reference
+// this constant, so updating it here updates both.
+export const APPROVED_PORTAL_URL = "https://TODO-genesis-portal-url.example.com/login";
 
 export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   // ── Product comparison ─────────────────────────────────────────────────────
@@ -315,27 +330,31 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── Customer reviews ───────────────────────────────────────────────────────
-  // Source: approved review site links supplied by the owner.
-  // Share BOTH links when a patient asks about reviews, testimonials, or customer
-  // experiences. Do NOT volunteer unless asked.
+  // DISABLED for Genesis Health (2026-08-17, owner instruction: "get rid of
+  // the reviews pages to offer") — no review-site links to share yet.
+  // enabledForPreview: false is the actual kill-switch (removes this topic
+  // from both bots' available topics regardless of any topic-key set); the
+  // URLs below are also placeholdered so a future re-enable can't
+  // accidentally serve Luma's review pages to a Genesis customer. Fill in
+  // Genesis's own review-platform links and flip enabledForPreview back to
+  // true whenever those exist.
   {
     key: "customer_reviews",
     approvedText:
       "Customers can read verified reviews on two independent platforms:\n" +
-      "ConsumerAffairs: https://www.consumeraffairs.com/health/luma-health.html\n" +
-      "ConsumersVerified: https://consumersverified.com/luma-health\n" +
+      "[TODO: Genesis review platform 1 URL]\n" +
+      "[TODO: Genesis review platform 2 URL]\n" +
       "Share both links together when a patient asks about reviews or customer feedback.",
     allowedParaphrase: false,
-    legalStatus: "approved",
-    clinicalStatus: "approved",
-    lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    legalStatus: "pending_user_clinical_approval",
+    clinicalStatus: "pending_clinical_review",
+    lastReviewedDate: "2026-08-17",
     prohibitedClaims: [
       "invented_star_rating", // never fabricate a rating or score
       "guaranteed_positive_outcome", // reviews reflect real customers, not guarantees
       "review_count_claim", // do not state a number of reviews
     ],
-    enabledForPreview: true,
+    enabledForPreview: false,
   },
 
   // ── Cancellation policy ────────────────────────────────────────────────────
@@ -556,7 +575,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     key: "portal_help",
     approvedText:
       "You can manage your account, check your order, and message the care team anytime through the patient portal: " +
-      "https://go.mylumahealth.com/login",
+      APPROVED_PORTAL_URL,
     allowedParaphrase: true,
     legalStatus: "approved",
     clinicalStatus: "approved",
@@ -588,20 +607,19 @@ export function getPreviewEnabledTopics(): readonly KnowledgeTopic[] {
 }
 
 /**
- * The fixed approved patient-portal login URL — the Sarah equivalent of
- * APPROVED_REVIEW_URLS. Sarah may output this verbatim; Lucy never does.
- */
-export const APPROVED_PORTAL_URL = "https://go.mylumahealth.com/login";
-
-/**
  * Direct "write a review" deep link — Sarah-only, used specifically in the
  * post-delivery review-request flow when the patient's sentiment is
  * positive. Distinct from APPROVED_REVIEW_URLS (the two general
  * read-reviews pages Lucy and Sarah both may share when asked about
  * reviews generally): this one is for actually asking someone to submit a
  * review, so it goes straight to the write-a-review form, not an overview page.
+ *
+ * DISABLED for Genesis Health — see customer_reviews' comment. The whole
+ * post-delivery review-request sweep is turned off in index.ts and
+ * order-fulfillment.service.ts rather than leave this pointed at a dead
+ * placeholder URL; this constant is unused while that's the case.
  */
-export const APPROVED_REVIEW_WRITE_URL = "https://www.consumeraffairs.com/review/write/?brand_id=27277";
+export const APPROVED_REVIEW_WRITE_URL = "";
 
 /**
  * Topic keys Sarah (the post-purchase support bot) is allowed to use — a
@@ -627,7 +645,8 @@ export const APPROVED_REVIEW_WRITE_URL = "https://www.consumeraffairs.com/review
 export const SARAH_TOPIC_KEYS = new Set([
   "insurance_payment",
   "how_luma_works_after_purchase",
-  "customer_reviews",
+  // customer_reviews intentionally omitted — disabled (enabledForPreview:
+  // false) for Genesis Health; see that topic's own comment.
   "cancellation_policy",
   "shipping_delivery",
   "privacy_hipaa",

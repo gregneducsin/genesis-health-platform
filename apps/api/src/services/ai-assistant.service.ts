@@ -138,7 +138,7 @@ const tools = [
 
 function systemPrompt(): string {
   const today = new Date().toISOString().slice(0, 10);
-  return `You are the data assistant embedded in Luma Health's internal operations dashboard (a healthcare customer/order/payroll CRM). Today's date is ${today}.
+  return `You are the data assistant embedded in Genesis Health's internal operations dashboard (a healthcare customer/order/payroll CRM). Today's date is ${today}.
 
 Answer questions about leads, orders, questionnaires, marketing CPA, and payroll using the tools available — never guess or estimate a number you could look up. Call a tool for every factual claim about the business's data.
 

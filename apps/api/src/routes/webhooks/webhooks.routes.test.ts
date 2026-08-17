@@ -332,7 +332,7 @@ describe("Webhooks", () => {
         });
       expect(res.status).toBe(200);
 
-      expect(sendMessageMock).toHaveBeenCalledWith("+15551110099", expect.stringContaining("this is Sarah"));
+      expect(sendMessageMock).toHaveBeenCalledWith("+15551110099", expect.stringContaining("this is Lisa"));
 
       const { db, customersTable } = await import("@luma/db");
       const { eq } = await import("drizzle-orm");
@@ -394,7 +394,7 @@ describe("Webhooks", () => {
   });
 
   describe("Bask order shipped", () => {
-    it("creates/matches a customer, sets orderShipped + trackingNumber, sends the notice, and arms the review-request trigger", async () => {
+    it("creates/matches a customer and sets orderShipped + trackingNumber, sends the notice", async () => {
       sendMessageMock.mockClear();
       sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_order_shipped" });
 
@@ -425,9 +425,10 @@ describe("Webhooks", () => {
       expect(conversation.orderShipped).toBe(true);
       expect(conversation.trackingNumber).toBe("5481040885");
 
+      // Review-request trigger arming is disabled for Genesis Health — see
+      // the comment in order-fulfillment.service.ts's handleOrderShipped.
       const [trigger] = await db.select().from(reviewRequestTriggersTable).where(eq(reviewRequestTriggersTable.personId, customer!.id));
-      expect(trigger).toBeDefined();
-      expect(trigger.status).toBe("pending");
+      expect(trigger).toBeUndefined();
     });
 
     it("rejects a payload missing the required trackingNumber with 400", async () => {
