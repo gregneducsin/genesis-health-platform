@@ -35,6 +35,23 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # The Google OAuth connect flow (gmail-oauth.routes.ts) lives on the api
+    # service but, unlike everything else it calls, isn't under /api/ — it's
+    # a top-level browser navigation (Google redirects back to it directly),
+    # and it needs req.user from the session cookie, which is only ever set
+    # for this (the dashboard's) domain. Without this block that request
+    # would either 404 against the SPA's index.html or, hit directly against
+    # the api service's own Railway domain, arrive with no session cookie at
+    # all and fail admin auth. Same proxy shape as /api/ above.
+    location /auth/ {
+        set $upstream_api http://${API_UPSTREAM};
+        proxy_pass $upstream_api;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }
