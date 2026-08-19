@@ -116,9 +116,21 @@ export function createGmailOAuthRouter(): RouterType {
         return;
       }
 
+      // Displayed once, on this admin-only authenticated page, so the value
+      // can be copied straight into the GOOGLE_REFRESH_TOKEN env var — this
+      // route deliberately doesn't persist it anywhere itself (see the
+      // requireRole comment above), so this page is the only place it's
+      // ever surfaced.
       res
         .status(200)
-        .send("Google Workspace connected successfully (scope: gmail.send). You may close this page.");
+        .type("html")
+        .send(
+          `<html><body style="font-family: sans-serif; max-width: 640px; margin: 40px auto;">` +
+            `<p>Google Workspace connected successfully (scope: gmail.send).</p>` +
+            `<p>Copy this value into the <code>GOOGLE_REFRESH_TOKEN</code> environment variable, then you can close this page:</p>` +
+            `<textarea readonly rows="3" style="width:100%; font-family: monospace; padding: 8px;" onclick="this.select()">${tokens.refresh_token}</textarea>` +
+            `</body></html>`,
+        );
     } catch (error) {
       next(error);
     }
