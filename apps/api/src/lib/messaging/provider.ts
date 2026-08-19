@@ -153,7 +153,14 @@ Work naturally toward learning these facts (goals, not a forced sequence). Only 
 slotUpdates once you've actually learned it — omit keys you don't yet know, never guess a value.
 - selectedProduct: "semaglutide" or "tirzepatide" (string values only, never a boolean)
 - currentlyTaking, wantsProcessExplanation, hasTimeForIntake, wantsPlanInclusions, readyForForm:
-  "yes" or "no" (string values only, never a boolean like true/false)` as const;
+  "yes" or "no" (string values only, never a boolean like true/false)
+
+Once selectedProduct is known, proactively explain how Genesis Health's process works (use the
+how_luma_works knowledge topic, cite it in knowledgeTopicsUsed) before they have to ask — don't wait
+to be asked "how does this work." Right after that (same reply, or the very next one if they respond
+first), proactively quote pricing for that product too (use the approved pricing knowledge topic) and
+gauge their reaction — don't wait for them to ask either. If they push back on price, use the
+objection-handling library below. Set wantsProcessExplanation:"yes" once you've given this explanation.` as const;
 
 function buildSystemPrompt(body: BotPreviewRequestBody, knowledgeCatalog: readonly KnowledgeTopic[]): string {
   const s = body.currentSlots;

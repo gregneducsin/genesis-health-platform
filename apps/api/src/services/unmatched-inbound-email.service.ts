@@ -136,7 +136,7 @@ function buildTranscript(messages: readonly UnmatchedEmailMessage[]): string {
   return text;
 }
 
-function systemPrompt(candidates: readonly MatchCandidate[], knownName: string | null): string {
+function systemPrompt(candidates: readonly MatchCandidate[], fromNameHeader: string | null): string {
   const candidateList = candidates.length
     ? candidates.map((c, i) => `${i}: ${c.firstName} ${c.lastName} (${c.email})`).join("\n")
     : "(no plausible candidates found)";
@@ -145,18 +145,18 @@ function systemPrompt(candidates: readonly MatchCandidate[], knownName: string |
 
 Classify the message and draft a short suggested reply for a staff member to review — you are never sending anything yourself, only drafting.
 
-We currently know the sender's name as: ${knownName ?? "unknown"}.
+The email's "From" header shows a display name of: ${fromNameHeader ?? "(none provided)"}. This is NOT necessarily a real person's name — people and businesses often put a company, team, department, or product name here instead (e.g. "Ark Health", "Support Team", "Billing Department", "No Reply"). Never assume it's the sender's real personal name just because it's present — judge it the same way you would evaluate any other unverified claim.
 
 Rules for the suggested reply:
 - Never state or imply a price, discount, or specific dollar figure.
 - Never give clinical/medical advice, dosing information, or comment on a specific medication.
 - Never promise a timeline, outcome, or that a specific person will follow up.
 - Keep it to 1-3 short sentences. Acknowledge what they asked, and say a member of the team will follow up.
-- If we don't know their name yet, the reply MUST ask for it naturally (e.g. "Could you share your name so we can look into this for you?") — asking for their name takes priority over any other clarifying question.
+- If we don't know the sender's real personal name yet, the reply MUST ask for it naturally (e.g. "Could you share your name so we can look into this for you?") — asking for their name takes priority over any other clarifying question.
 - Do not include a greeting ("Hi ...") or sign-off — those are added separately.
 - If the message is spam, a phishing attempt, an automated notification, or otherwise not a real inquiry, set intent to spam_or_irrelevant and suggestedReply to null.
 
-For senderName: if we already know it (${knownName ?? "unknown"}), just return that. Otherwise extract it only if the sender actually states or signs their name somewhere in the thread — never guess from an email address or writing style.
+For senderName: return the sender's real personal name ONLY if either (a) the From header's display name above plausibly reads like an individual's actual first and last name — not a business, team, brand, or department name, or (b) they explicitly state or sign their own name somewhere in the message body. Otherwise return null. Never treat a company/team/department name as a person's name, and never guess a name from an email address or writing style.
 
 Possible existing customers this sender might be (matched by name appearing in their messages) — only pick one if you're confident, based on real evidence (e.g. they sign with a matching name), never based on the topic alone:
 ${candidateList}`;
@@ -164,21 +164,20 @@ ${candidateList}`;
 
 async function classifyAndDraft(
   fromAddress: string,
-  fromName: string | null,
+  fromNameHeader: string | null,
   messages: readonly UnmatchedEmailMessage[],
   candidates: readonly MatchCandidate[],
 ): Promise<Classification> {
   const client = getClient();
   const transcript = buildTranscript(messages);
-  const knownName = fromName;
 
   const createPromise = client.messages.create({
     model: MODEL,
     max_tokens: 500,
-    system: systemPrompt(candidates, knownName),
+    system: systemPrompt(candidates, fromNameHeader),
     tools: [CLASSIFY_TOOL],
     tool_choice: { type: "tool", name: "classify_unmatched_email" },
-    messages: [{ role: "user", content: `From: ${fromName ? `${fromName} <${fromAddress}>` : fromAddress}\n\nThread so far:\n${transcript}` }],
+    messages: [{ role: "user", content: `From: ${fromNameHeader ? `${fromNameHeader} <${fromAddress}>` : fromAddress}\n\nThread so far:\n${transcript}` }],
   });
 
   const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), CALL_TIMEOUT_MS));
@@ -229,7 +228,11 @@ async function maybeCreateLead(
   if (matchedExisting) return null;
   if (classification.intent !== "new_lead_interest") return null;
 
-  const name = thread.fromName ?? classification.senderName;
+  // Only Claude's judged senderName counts as a confirmed real name — never
+  // fall back to the raw email header display name here, since that's
+  // frequently a business/team name (e.g. "Ark Health"), not a person's.
+  // See systemPrompt's instructions to Claude on this exact distinction.
+  const name = classification.senderName;
   if (!name) return null;
 
   const { firstName, lastName } = splitName(name);
@@ -320,17 +323,20 @@ export async function recordAndClassifyUnmatchedEmail(input: {
   });
 
   const messages = await listUnmatchedEmailMessages(thread.id);
-  const knownName = input.fromName ?? thread.fromName;
+  // Raw "From" header display name — shown to Claude as unverified context
+  // only (see systemPrompt). Never treated as a confirmed real name; only
+  // classification.senderName (Claude's judged result) counts as that.
+  const fromNameHeader = input.fromName ?? thread.fromName;
   const transcriptText = messages.map((m) => m.body).join(" ");
 
-  const candidates = await findMatchCandidates(knownName, transcriptText).catch((err) => {
+  const candidates = await findMatchCandidates(fromNameHeader, transcriptText).catch((err) => {
     logger.warn({ reason: err instanceof Error ? err.message : String(err) }, "unmatched-email candidate lookup failed");
     return [];
   });
 
   let classification: Classification | null = null;
   try {
-    classification = await classifyAndDraft(input.fromAddress, knownName, messages, candidates);
+    classification = await classifyAndDraft(input.fromAddress, fromNameHeader, messages, candidates);
   } catch (err) {
     logger.warn({ reason: err instanceof Error ? err.message : String(err) }, "unmatched-email classification failed");
   }
@@ -365,13 +371,16 @@ export async function recordAndClassifyUnmatchedEmail(input: {
     // address is live and reads its mail. A failed classification call
     // (classification is null) still gets the ack, same as before — no
     // way to know it's spam without Claude, so default to acknowledging.
-    await sendAutoAcknowledgment(thread.id, input.fromAddress, input.subject, knownName, input.messageId);
+    // Uses the CONFIRMED name (classification.senderName), not the raw
+    // header — so a display name like "Ark Health" correctly triggers the
+    // "what's your name?" ack instead of wrongly addressing them as "Ark".
+    await sendAutoAcknowledgment(thread.id, input.fromAddress, input.subject, classification?.senderName ?? null, input.messageId);
   }
 
   const [updated] = await db
     .update(unmatchedEmailThreadsTable)
     .set({
-      fromName: knownName ?? classification?.senderName ?? undefined,
+      fromName: fromNameHeader ?? classification?.senderName ?? undefined,
       aiIntent: classification?.intent ?? thread.aiIntent,
       aiSummary: classification?.summary ?? thread.aiSummary,
       suggestedReply: leadResult?.justCreated ? null : (classification?.suggestedReply ?? thread.suggestedReply),
