@@ -92,6 +92,13 @@
       "when": 1786936282401,
       "tag": "0012_curved_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787159647652,
+      "tag": "0013_loose_sway",
+      "breakpoints": true
     }
   ]
 }

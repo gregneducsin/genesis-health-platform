@@ -27,6 +27,8 @@ export const conversationMessageSchema = z.object({
   body: z.string(),
   sentiment: z.enum(["positive", "neutral", "negative"]).nullable(),
   createdAt: z.string(),
+  /** Only present for email-channel messages — absent (not merely null) on every SMS message, since the SMS table has no subject column at all. */
+  subject: z.string().optional(),
 });
 export type ConversationMessageDto = z.infer<typeof conversationMessageSchema>;
 
@@ -43,7 +45,19 @@ export const conversationDetailSchema = z.object({
     promoOffered: z.boolean(),
     needsAttention: z.boolean(),
   }),
-  customer: z.object({ firstName: z.string(), lastName: z.string(), phone: z.string().nullable() }),
+  /** email is only populated on the email-channel response — optional so the SMS response shape (no email field at all) still matches. */
+  customer: z.object({ firstName: z.string(), lastName: z.string(), phone: z.string().nullable(), email: z.string().optional() }),
   messages: z.array(conversationMessageSchema),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
+
+export const sendConversationReplyRequestSchema = z.object({
+  body: z.string().min(1).max(2000),
+});
+export type SendConversationReplyRequest = z.infer<typeof sendConversationReplyRequestSchema>;
+
+export const sendConversationReplyResponseSchema = z.object({
+  sent: z.boolean(),
+  reason: z.enum(["not_found", "no_phone", "send_failed"]).optional(),
+});
+export type SendConversationReplyResponse = z.infer<typeof sendConversationReplyResponseSchema>;

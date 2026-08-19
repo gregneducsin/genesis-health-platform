@@ -6,6 +6,9 @@ import { sweepAbandonedCartTriggers } from "./services/abandoned-cart.service.js
 // sweepReviewRequestTriggers import removed — see the "Review-request sweep"
 // comment below for why it's not registered on an interval right now.
 import { sweepLeadCheckinTriggers } from "./services/lead-checkin.service.js";
+import { sweepAbandonedCartEmailTriggers } from "./services/abandoned-cart-email.service.js";
+import { sweepMetaLeadEmailTriggers } from "./services/meta-lead-email.service.js";
+import { sweepInboundEmail } from "./services/email-inbound.service.js";
 
 // Migrations are applied as a discrete step before this process starts (see
 // packages/db/src/migrate.ts's docstring, the Dockerfile entrypoint, and the
@@ -53,3 +56,41 @@ setInterval(() => {
     logger.error({ err }, "lead check-in sweep failed");
   });
 }, LEAD_CHECKIN_SWEEP_INTERVAL_MS);
+
+// Same tight tick as the SMS abandoned-cart sweep above — the email
+// sequence's finest-grained step (the opener) has the identical 10-minute
+// delay, even though its later steps (urgency/educational/plan_comparison)
+// are due days out.
+const ABANDONED_CART_EMAIL_SWEEP_INTERVAL_MS = 2 * 60 * 1000;
+setInterval(() => {
+  sweepAbandonedCartEmailTriggers().catch((err) => {
+    logger.error({ err }, "abandoned-cart email sweep failed");
+  });
+}, ABANDONED_CART_EMAIL_SWEEP_INTERVAL_MS);
+
+// Same tight tick as the abandoned-cart email sweep above, and for the same
+// reason — its opener step has the identical 10-minute delay.
+const META_LEAD_EMAIL_SWEEP_INTERVAL_MS = 2 * 60 * 1000;
+setInterval(() => {
+  sweepMetaLeadEmailTriggers().catch((err) => {
+    logger.error({ err }, "meta-lead email sweep failed");
+  });
+}, META_LEAD_EMAIL_SWEEP_INTERVAL_MS);
+
+// Inbound-email IMAP poll — same in-process interval pattern as the sweeps
+// above, just polling a mailbox instead of due DB rows (see
+// email-inbound.service.ts's sweepInboundEmail docstring). Gated on
+// GOOGLE_WORKSPACE_SMTP_USER being set (unlike the SMS sweeps, which always
+// run and just no-op per item when unconfigured): an unconfigured mailbox
+// can't do anything useful, so starting the poll would only produce a
+// connection-refused log line every minute.
+const EMAIL_INBOUND_SWEEP_INTERVAL_MS = 60 * 1000;
+if (process.env.GOOGLE_WORKSPACE_SMTP_USER) {
+  setInterval(() => {
+    sweepInboundEmail().catch((err) => {
+      logger.error({ err }, "inbound email sweep failed");
+    });
+  }, EMAIL_INBOUND_SWEEP_INTERVAL_MS);
+} else {
+  logger.info("GOOGLE_WORKSPACE_SMTP_USER not set — inbound email polling disabled");
+}

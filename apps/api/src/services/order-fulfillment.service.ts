@@ -1,8 +1,11 @@
 import { and, eq, lt, lte, or, sql } from "drizzle-orm";
 import { db, customersTable, reviewRequestTriggersTable } from "@luma/db";
 import { getOrCreateSupportConversation, appendSupportMessage, updateSupportConversationState } from "./support-conversations.service.js";
+import { getOrCreateSupportEmailConversation, appendSupportEmailMessage } from "./support-email-conversations.service.js";
 import { getSmsProvider } from "../lib/sms-provider.js";
 import { renderOrderReceivedMessage, renderPrescriptionWrittenMessage, renderOrderShippedMessage, renderReviewRequestMessage } from "../lib/support/templates.js";
+import { renderOrderReceivedEmail, renderPrescriptionWrittenEmail, renderOrderShippedEmail } from "../lib/email/templates.js";
+import { sendTriggerEmail } from "../lib/email/send-trigger-email.js";
 import { logger } from "../lib/logger.js";
 
 /**
@@ -25,8 +28,11 @@ const REVIEW_REQUEST_DELAY_MS = 5 * 24 * 60 * 60 * 1000;
 const MAX_SEND_ATTEMPTS = 3;
 const RETRY_COOLDOWN_MS = 30 * 60 * 1000;
 
-async function getCustomerContact(personId: string): Promise<{ firstName: string; phone: string | null } | undefined> {
-  const [row] = await db.select({ firstName: customersTable.firstName, phone: customersTable.phone }).from(customersTable).where(eq(customersTable.id, personId));
+async function getCustomerContact(personId: string): Promise<{ firstName: string; phone: string | null; email: string } | undefined> {
+  const [row] = await db
+    .select({ firstName: customersTable.firstName, phone: customersTable.phone, email: customersTable.email })
+    .from(customersTable)
+    .where(eq(customersTable.id, personId));
   return row;
 }
 
@@ -37,22 +43,37 @@ async function getCustomerContact(personId: string): Promise<{ firstName: string
  */
 export async function sendOrderReceivedOpener(personId: string): Promise<void> {
   const customer = await getCustomerContact(personId);
-  if (!customer?.phone) {
-    logger.warn({ personId }, "order-received opener not sent: no phone number on file");
+  if (!customer) {
+    logger.warn({ personId }, "order-received opener not sent: customer not found");
     return;
   }
 
-  const text = renderOrderReceivedMessage(customer.firstName);
   const conversation = await getOrCreateSupportConversation(personId);
 
-  try {
-    const result = await getSmsProvider().sendMessage(customer.phone, text);
-    await appendSupportMessage(conversation.id, "outbound", text, { providerMessageId: result.providerMessageId });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    logger.warn({ personId, reason }, "order-received opener send failed");
-    await appendSupportMessage(conversation.id, "outbound", text, {});
+  if (customer.phone) {
+    const text = renderOrderReceivedMessage(customer.firstName);
+    try {
+      const result = await getSmsProvider().sendMessage(customer.phone, text);
+      await appendSupportMessage(conversation.id, "outbound", text, { providerMessageId: result.providerMessageId });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      logger.warn({ personId, reason }, "order-received opener send failed");
+      await appendSupportMessage(conversation.id, "outbound", text, {});
+    }
+  } else {
+    logger.warn({ personId }, "order-received opener SMS not sent: no phone number on file");
   }
+
+  const emailConversation = await getOrCreateSupportEmailConversation(personId);
+  await sendTriggerEmail({
+    persona: "sarah",
+    personId,
+    conversationId: emailConversation.id,
+    email: customer.email,
+    render: (unsubscribeUrl) => renderOrderReceivedEmail(customer.firstName, unsubscribeUrl),
+    appendMessage: appendSupportEmailMessage,
+    logLabel: "order-received",
+  });
 }
 
 /** Fired synchronously from the prescription-written webhook handler. */
@@ -61,17 +82,30 @@ export async function handlePrescriptionWritten(personId: string): Promise<void>
   const conversation = await getOrCreateSupportConversation(personId);
   await updateSupportConversationState(conversation.id, { prescriptionWritten: true, prescriptionWrittenAt: new Date() });
 
-  if (!customer?.phone) {
+  if (customer?.phone) {
+    const text = renderPrescriptionWrittenMessage(customer.firstName);
+    try {
+      const result = await getSmsProvider().sendMessage(customer.phone, text);
+      await appendSupportMessage(conversation.id, "outbound", text, { providerMessageId: result.providerMessageId });
+    } catch (err) {
+      logger.warn({ personId, reason: err instanceof Error ? err.message : String(err) }, "prescription-written notice send failed");
+      await appendSupportMessage(conversation.id, "outbound", text, {});
+    }
+  } else {
     logger.warn({ personId }, "prescription-written notice not sent: no phone number on file");
-    return;
   }
-  const text = renderPrescriptionWrittenMessage(customer.firstName);
-  try {
-    const result = await getSmsProvider().sendMessage(customer.phone, text);
-    await appendSupportMessage(conversation.id, "outbound", text, { providerMessageId: result.providerMessageId });
-  } catch (err) {
-    logger.warn({ personId, reason: err instanceof Error ? err.message : String(err) }, "prescription-written notice send failed");
-    await appendSupportMessage(conversation.id, "outbound", text, {});
+
+  if (customer) {
+    const emailConversation = await getOrCreateSupportEmailConversation(personId);
+    await sendTriggerEmail({
+      persona: "sarah",
+      personId,
+      conversationId: emailConversation.id,
+      email: customer.email,
+      render: (unsubscribeUrl) => renderPrescriptionWrittenEmail(customer.firstName, unsubscribeUrl),
+      appendMessage: appendSupportEmailMessage,
+      logLabel: "prescription-written",
+    });
   }
 }
 
@@ -95,6 +129,19 @@ export async function handleOrderShipped(personId: string, trackingNumber: strin
     }
   } else {
     logger.warn({ personId }, "order-shipped notice not sent: no phone number on file");
+  }
+
+  if (customer) {
+    const emailConversation = await getOrCreateSupportEmailConversation(personId);
+    await sendTriggerEmail({
+      persona: "sarah",
+      personId,
+      conversationId: emailConversation.id,
+      email: customer.email,
+      render: (unsubscribeUrl) => renderOrderShippedEmail(customer.firstName, trackingNumber, unsubscribeUrl),
+      appendMessage: appendSupportEmailMessage,
+      logLabel: "order-shipped",
+    });
   }
 
   // Review-request trigger arming disabled for Genesis Health — no

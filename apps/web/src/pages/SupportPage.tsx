@@ -1,7 +1,32 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useSupportConversationsList, useSupportConversationDetail, useSendSarahTestMessage, useClearSupportNeedsAttention } from "../hooks/useSupportConversations";
+import { useSearch } from "wouter";
+import {
+  useSupportConversationsList,
+  useSupportConversationDetail,
+  useSendSarahTestMessage,
+  useClearSupportNeedsAttention,
+  useSendStaffReply,
+  type SupportConversationChannel,
+} from "../hooks/useSupportConversations";
 import { Badge, Card, Button, Input } from "../components/ui";
 import { ApiError } from "../hooks/useAuth";
+import { formatTime, formatDate } from "../lib/formatTime";
+
+function ChannelToggle({ channel, onChange }: { channel: SupportConversationChannel; onChange: (c: SupportConversationChannel) => void }) {
+  return (
+    <div className="flex gap-1">
+      {(["sms", "email"] as const).map((c) => (
+        <button
+          key={c}
+          onClick={() => onChange(c)}
+          className={"rounded px-2 py-1 text-xs font-medium uppercase " + (channel === c ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600")}
+        >
+          {c}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const SENTIMENT_COLOR: Record<string, "green" | "gray" | "red"> = {
   positive: "green",
@@ -22,11 +47,21 @@ function relativeTime(iso: string | null): string {
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.round(mins / 60);
   if (hours < 24) return `${hours}h ago`;
-  return new Date(iso).toLocaleDateString();
+  return formatDate(iso);
 }
 
-function SupportConversationList({ selectedId, onSelect }: { selectedId: string | null; onSelect: (id: string) => void }) {
-  const { data, isLoading } = useSupportConversationsList();
+function SupportConversationList({
+  channel,
+  onChannelChange,
+  selectedId,
+  onSelect,
+}: {
+  channel: SupportConversationChannel;
+  onChannelChange: (c: SupportConversationChannel) => void;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const { data, isLoading } = useSupportConversationsList(channel);
   const [onlyNeedsAttention, setOnlyNeedsAttention] = useState(false);
 
   const attentionCount = data?.conversations.filter((c) => c.needsAttention).length ?? 0;
@@ -40,7 +75,10 @@ function SupportConversationList({ selectedId, onSelect }: { selectedId: string 
       <div className="border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-900">Support</h2>
-          {attentionCount > 0 && <Badge color="red">{attentionCount} need attention</Badge>}
+          <div className="flex items-center gap-2">
+            {attentionCount > 0 && <Badge color="red">{attentionCount} need attention</Badge>}
+            <ChannelToggle channel={channel} onChange={onChannelChange} />
+          </div>
         </div>
         <div className="mt-2 flex gap-1">
           <button
@@ -88,8 +126,43 @@ function SupportConversationList({ selectedId, onSelect }: { selectedId: string 
   );
 }
 
-function SupportConversationDetailPanel({ conversationId }: { conversationId: string }) {
-  const { data, isLoading } = useSupportConversationDetail(conversationId);
+/** A staff-authored reply — email only, since no SMS provider is wired up yet. */
+function StaffReplyBox({ conversationId, channel }: { conversationId: string; channel: SupportConversationChannel }) {
+  const [text, setText] = useState("");
+  const sendReply = useSendStaffReply();
+
+  function handleSend() {
+    const body = text.trim();
+    if (!body || sendReply.isPending) return;
+    sendReply.mutate(
+      { conversationId, body, channel },
+      { onSuccess: (data) => { if (data.sent) setText(""); } },
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <div className="flex items-center gap-2">
+        <Input className="flex-1" placeholder="Reply as staff (email)…" value={text} onChange={(e) => setText(e.target.value)} disabled={sendReply.isPending} />
+        <Button onClick={handleSend} disabled={sendReply.isPending || !text.trim()}>
+          {sendReply.isPending ? "Sending…" : "Send reply"}
+        </Button>
+      </div>
+      <p className="mt-1 text-[11px] text-gray-400">Sent as an email, greeted and signed off the same way an AI-drafted reply would be.</p>
+      {sendReply.isSuccess && sendReply.data.sent === false && (
+        <p className="mt-1 text-xs text-red-600">
+          {sendReply.data.reason === "send_failed" && "Send failed — the message was logged, but nothing actually went out."}
+        </p>
+      )}
+      {sendReply.isError && (
+        <p className="mt-1 text-xs text-red-600">{sendReply.error instanceof ApiError ? sendReply.error.message : "Something went wrong."}</p>
+      )}
+    </div>
+  );
+}
+
+function SupportConversationDetailPanel({ conversationId, channel }: { conversationId: string; channel: SupportConversationChannel }) {
+  const { data, isLoading } = useSupportConversationDetail(conversationId, channel);
   const [input, setInput] = useState("");
   const sendMessage = useSendSarahTestMessage();
   const clearAttention = useClearSupportNeedsAttention();
@@ -125,7 +198,9 @@ function SupportConversationDetailPanel({ conversationId }: { conversationId: st
               {customer.firstName} {customer.lastName}
               {conversation.needsAttention && <Badge color="red">Needs attention</Badge>}
             </p>
-            <p className="text-xs text-gray-400">{customer.phone ?? "No phone on file"}</p>
+            <p className="text-xs text-gray-400">
+              {channel === "email" ? customer.email ?? "No email on file" : customer.phone ?? "No phone on file"}
+            </p>
           </div>
           <div className="flex flex-wrap justify-end gap-1">
             {conversation.prescriptionWritten && <Badge color="blue">prescription written</Badge>}
@@ -135,11 +210,18 @@ function SupportConversationDetailPanel({ conversationId }: { conversationId: st
           </div>
         </div>
         {conversation.needsAttention && (
-          <div className="mt-2 flex items-center justify-between rounded-md bg-red-50 px-3 py-2">
-            <p className="text-xs text-red-700">This conversation needs staff attention.</p>
-            <Button variant="secondary" onClick={() => clearAttention.mutate(conversation.id)} disabled={clearAttention.isPending}>
-              {clearAttention.isPending ? "Marking…" : "Mark reviewed"}
-            </Button>
+          <div className="mt-2 rounded-md bg-red-50 px-3 py-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-red-700">This conversation needs staff attention.</p>
+              <Button
+                variant="secondary"
+                onClick={() => clearAttention.mutate({ conversationId: conversation.id, channel })}
+                disabled={clearAttention.isPending}
+              >
+                {clearAttention.isPending ? "Marking…" : "Mark reviewed"}
+              </Button>
+            </div>
+            {channel === "email" && <StaffReplyBox conversationId={conversation.id} channel={channel} />}
           </div>
         )}
       </div>
@@ -149,6 +231,7 @@ function SupportConversationDetailPanel({ conversationId }: { conversationId: st
         {messages.map((m) => (
           <div key={m.id} className={m.direction === "inbound" ? "text-left" : "text-right"}>
             <div className={"inline-flex max-w-[75%] flex-col gap-1 " + (m.direction === "inbound" ? "items-start" : "items-end")}>
+              {m.subject && <span className="px-1 text-[11px] font-medium text-gray-500">{m.subject}</span>}
               <span
                 className={
                   m.direction === "inbound"
@@ -159,7 +242,7 @@ function SupportConversationDetailPanel({ conversationId }: { conversationId: st
                 {m.body}
               </span>
               <div className="flex items-center gap-2 px-1">
-                <span className="text-[11px] text-gray-400">{new Date(m.createdAt).toLocaleTimeString()}</span>
+                <span className="text-[11px] text-gray-400">{formatTime(m.createdAt)}</span>
                 <SentimentBadge sentiment={m.sentiment} />
               </div>
             </div>
@@ -168,46 +251,64 @@ function SupportConversationDetailPanel({ conversationId }: { conversationId: st
         {sendMessage.isPending && <p className="text-sm text-gray-400">Lisa is thinking…</p>}
       </div>
 
-      <form onSubmit={handleSubmit} className="border-t border-gray-200 p-3">
-        <p className="mb-2 text-xs text-gray-400">
-          No SMS provider is connected yet — simulate what the patient would text back to test the live guardrails.
-        </p>
-        <div className="flex items-center gap-2">
-          <Input
-            className="flex-1"
-            placeholder="Simulate an inbound message…"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={sendMessage.isPending}
-          />
-          <Button type="submit" disabled={sendMessage.isPending || !input.trim()}>
-            Send
-          </Button>
-        </div>
-        {sendMessage.isError && (
-          <p className="mt-2 text-xs text-red-600">
-            {sendMessage.error instanceof ApiError ? sendMessage.error.message : "Something went wrong."}
+      {channel === "sms" ? (
+        <form onSubmit={handleSubmit} className="border-t border-gray-200 p-3">
+          <p className="mb-2 text-xs text-gray-400">
+            No SMS provider is connected yet — simulate what the patient would text back to test the live guardrails. Nothing
+            actually sends to a real phone.
           </p>
-        )}
-        {sendMessage.isSuccess && sendMessage.data.ok === false && (
-          <p className="mt-2 text-xs text-red-600">Lisa's reply was rejected by the guardrail ({sendMessage.data.code}) — nothing was sent.</p>
-        )}
-      </form>
+          <div className="flex items-center gap-2">
+            <Input
+              className="flex-1"
+              placeholder="Simulate an inbound message…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={sendMessage.isPending}
+            />
+            <Button type="submit" disabled={sendMessage.isPending || !input.trim()}>
+              Send
+            </Button>
+          </div>
+          {sendMessage.isError && (
+            <p className="mt-2 text-xs text-red-600">
+              {sendMessage.error instanceof ApiError ? sendMessage.error.message : "Something went wrong."}
+            </p>
+          )}
+          {sendMessage.isSuccess && sendMessage.data.ok === false && (
+            <p className="mt-2 text-xs text-red-600">Lisa's reply was rejected by the guardrail ({sendMessage.data.code}) — nothing was sent.</p>
+          )}
+        </form>
+      ) : (
+        <div className="border-t border-gray-200 p-3">
+          <p className="text-xs text-gray-400">
+            Reply from the box above when this conversation needs attention, or reply from your own email client anytime.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }
 
 export function SupportPage() {
+  // Lets NeedsAttentionPage link directly into the right channel tab (e.g. /support?channel=email).
+  const search = useSearch();
+  const initialChannel: SupportConversationChannel = new URLSearchParams(search).get("channel") === "email" ? "email" : "sms";
+  const [channel, setChannel] = useState<SupportConversationChannel>(initialChannel);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  function handleChannelChange(c: SupportConversationChannel) {
+    setChannel(c);
+    setSelectedId(null);
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <div className="md:col-span-1">
-        <SupportConversationList selectedId={selectedId} onSelect={setSelectedId} />
+        <SupportConversationList channel={channel} onChannelChange={handleChannelChange} selectedId={selectedId} onSelect={setSelectedId} />
       </div>
       <div className="md:col-span-2">
         {selectedId ? (
-          <SupportConversationDetailPanel conversationId={selectedId} />
+          <SupportConversationDetailPanel conversationId={selectedId} channel={channel} />
         ) : (
           <Card className="flex h-[calc(100vh-180px)] items-center justify-center">
             <p className="text-sm text-gray-400">Select a conversation to view it.</p>

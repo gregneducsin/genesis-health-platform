@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, date, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, date, timestamp, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // person_number_seq is NOT declared here via drizzle-kit's pgSequence() —
@@ -28,6 +28,15 @@ export const customersTable = pgTable(
     leadReceivedDate: date("lead_received_date", { mode: "string" }).notNull(),
     leadCreatedAt: timestamp("lead_created_at", { withTimezone: true }),
     leadType: text("lead_type").notNull().default("Other / Unknown"),
+    // Do-not-disturb, email channel: set when the customer opts out of
+    // email (STOP-equivalent language in a reply, or the one-click
+    // unsubscribe link every automated email carries), cleared
+    // automatically on purchase. Every email send path (dnd.service.ts's
+    // isCustomerEmailDnd) must check this before sending. SMS/iMessage has
+    // no equivalent flag yet — that channel has no working provider wired
+    // up, so there's nothing to gate.
+    emailDnd: boolean("email_dnd").notNull().default(false),
+    emailDndAt: timestamp("email_dnd_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

@@ -18,8 +18,11 @@ import type {
   BaskOrderShippedWebhookRequest,
 } from "@luma/shared";
 import { scheduleAbandonedCartOpener } from "./abandoned-cart.service.js";
+import { scheduleAbandonedCartEmailSequence } from "./abandoned-cart-email.service.js";
 import { sendMetaLeadOpener } from "./meta-lead.service.js";
+import { scheduleMetaLeadEmailSequence } from "./meta-lead-email.service.js";
 import { sendOrderReceivedOpener, handlePrescriptionWritten, handleOrderShipped } from "./order-fulfillment.service.js";
+import { setCustomerEmailDnd } from "./dnd.service.js";
 
 /**
  * Case-insensitive exact email match — NOT ilike(), which treats `_` and `%`
@@ -30,7 +33,7 @@ import { sendOrderReceivedOpener, handlePrescriptionWritten, handleOrderShipped 
  * misattributing one person's order/prescription/tracking data to another.
  * lower()-equality has no wildcard semantics at all.
  */
-function caseInsensitiveEmailEq(email: string) {
+export function caseInsensitiveEmailEq(email: string) {
   return sql`lower(${customersTable.email}) = lower(${email})`;
 }
 
@@ -182,6 +185,7 @@ export async function handleGhlLeadWebhook(payload: GhlLeadWebhookRequest): Prom
     // scheduled sweep like the abandoned-cart trigger.
     if (isMetaFormFillLead(payload.leadType)) {
       await sendMetaLeadOpener(customerId);
+      await scheduleMetaLeadEmailSequence(customerId);
     }
 
     await markWebhookEventProcessed(recorded.id, customerId);
@@ -232,6 +236,11 @@ export async function handleBaskOrderWebhook(payload: BaskOrderWebhookRequest): 
         orderClassificationSource: "bask",
       });
     });
+
+    // A purchase is treated as fresh consent to be messaged again by email —
+    // cleared before the opener below so a previously opted-out customer's
+    // order confirmation isn't itself blocked by a now-stale DND flag.
+    await setCustomerEmailDnd(customerId, false);
 
     // Sarah's opening "doctor is reviewing it" message fires the moment the
     // order lands — instant, same as the Meta lead opener, not a scheduled sweep.
@@ -347,11 +356,14 @@ export async function handleBaskQuestionnaireWebhook(payload: BaskQuestionnaireW
       })
       .returning({ id: questionnaireEventsTable.id });
 
-    // Arms the first Lucy outreach 10 minutes from now. Idempotent per
-    // questionnaire event, so a duplicate "abandoned" delivery for the same
-    // questionnaire can't double-schedule.
+    // Arms the first Lucy SMS outreach 10 minutes from now, plus the
+    // independent 4-step email nurture sequence (opener/urgency/educational/
+    // plan_comparison — see abandoned-cart-email.service.ts). Both are
+    // idempotent per questionnaire event, so a duplicate "abandoned"
+    // delivery for the same questionnaire can't double-schedule either.
     if (payload.status === "abandoned") {
       await scheduleAbandonedCartOpener(customerId, event.id);
+      await scheduleAbandonedCartEmailSequence(customerId, event.id);
     }
 
     await markWebhookEventProcessed(recorded.id, customerId);

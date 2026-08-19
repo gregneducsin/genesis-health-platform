@@ -26,6 +26,12 @@ import { createBaskQuestionnaireWebhookRouter } from "./routes/webhooks/bask-que
 import { createBaskPaymentFailedWebhookRouter } from "./routes/webhooks/bask-payment-failed.routes.js";
 import { createBaskPrescriptionWrittenWebhookRouter } from "./routes/webhooks/bask-prescription-written.routes.js";
 import { createBaskOrderShippedWebhookRouter } from "./routes/webhooks/bask-order-shipped.routes.js";
+import { createGmailOAuthRouter } from "./routes/gmail-oauth.routes.js";
+import { createGmailRouter } from "./routes/gmail.routes.js";
+import { createNeedsAttentionRouter } from "./routes/needs-attention.routes.js";
+import { createUnmatchedEmailsRouter } from "./routes/unmatched-emails.routes.js";
+import { createReportingRouter } from "./routes/reporting.routes.js";
+import { createEmailUnsubscribeRouter } from "./routes/email-unsubscribe.routes.js";
 
 export function createApp(): Express {
   const app = express();
@@ -53,8 +59,20 @@ export function createApp(): Express {
   // following a link, not a call from our dashboard or from Bask/GHL.
   app.use("/go", createIntakeLinksRouter());
 
+  // Same public, unauthenticated reasoning as /go above — the destination
+  // of the one-click unsubscribe link every automated email carries.
+  app.use("/unsubscribe", createEmailUnsubscribeRouter());
+
   // Populate req.user from the session cookie before any route that needs it.
   app.use(sessionMiddleware);
+
+  // Mounted after sessionMiddleware (not alongside /go and /unsubscribe
+  // above) because, unlike those two, this route is NOT meant to be public:
+  // it initiates the OAuth flow that connects the app's own outbound Gmail
+  // identity, which only an admin should ever be able to (re)trigger — see
+  // requireRole("admin") inside gmail-oauth.routes.ts, which needs req.user
+  // already populated to do anything.
+  app.use("/auth/google", createGmailOAuthRouter());
 
   // Cookie-authenticated browser routes. Individual mutating routes within
   // this family apply CSRF protection themselves (see auth.routes.ts) —
@@ -72,6 +90,10 @@ export function createApp(): Express {
   app.use("/api/app/payroll/employees", createEmployeesRouter());
   app.use("/api/app/payroll/weeks", createPayrollWeeksRouter());
   app.use("/api/app/payroll/marketing-spend", createMarketingSpendRouter());
+  app.use("/api/app/needs-attention", createNeedsAttentionRouter());
+  app.use("/api/app/unmatched-emails", createUnmatchedEmailsRouter());
+  app.use("/api/app/reporting", createReportingRouter());
+  app.use("/api/app/gmail", createGmailRouter());
 
   // Webhook routes: shared-secret header auth (see webhookAuth.ts), never
   // session- or CSRF-authenticated — these callers aren't browsers and carry

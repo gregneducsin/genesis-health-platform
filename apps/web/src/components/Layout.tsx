@@ -1,16 +1,21 @@
 import { type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useCurrentUser, useLogout } from "../hooks/useAuth";
-import { Button } from "./ui";
+import { useNeedsAttentionList } from "../hooks/useNeedsAttention";
+import { useUnmatchedEmailsList } from "../hooks/useUnmatchedEmails";
+import { Button, Badge } from "./ui";
 import { AiAssistantWidget } from "./AiAssistantWidget";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
+  { href: "/needs-attention", label: "Needs Attention" },
+  { href: "/unmatched-emails", label: "Unmatched Emails" },
   { href: "/customers", label: "Leads" },
   { href: "/orders", label: "Orders" },
   { href: "/questionnaires", label: "Questionnaires" },
   { href: "/conversations", label: "Conversations" },
   { href: "/support", label: "Support" },
+  { href: "/reporting", label: "Reporting" },
   { href: "/marketing-cpa", label: "Marketing CPA" },
   { href: "/payroll/employees", label: "Employees" },
   { href: "/payroll/weeks", label: "Payroll" },
@@ -20,6 +25,11 @@ export function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { data } = useCurrentUser();
   const logout = useLogout();
+  const canSeeNeedsAttention = data?.user?.role === "admin" || data?.user?.role === "manager";
+  const { data: needsAttentionData } = useNeedsAttentionList(canSeeNeedsAttention);
+  const needsAttentionCount = needsAttentionData?.items.length ?? 0;
+  const { data: unmatchedEmailsData } = useUnmatchedEmailsList(canSeeNeedsAttention);
+  const unmatchedEmailsCount = unmatchedEmailsData?.items.filter((i) => i.status === "needs_review").length ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,12 +42,15 @@ export function Layout({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={
-                  location === item.href
+                  "flex items-center gap-1.5 " +
+                  (location === item.href
                     ? "text-sm font-medium text-blue-600"
-                    : "text-sm font-medium text-gray-600 hover:text-gray-900"
+                    : "text-sm font-medium text-gray-600 hover:text-gray-900")
                 }
               >
                 {item.label}
+                {item.href === "/needs-attention" && needsAttentionCount > 0 && <Badge color="red">{needsAttentionCount}</Badge>}
+                {item.href === "/unmatched-emails" && unmatchedEmailsCount > 0 && <Badge color="yellow">{unmatchedEmailsCount}</Badge>}
               </Link>
             ))}
           </nav>

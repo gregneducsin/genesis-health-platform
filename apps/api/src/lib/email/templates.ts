@@ -1,0 +1,774 @@
+/**
+ * Fixed, pre-approved email templates for automated trigger sends — same
+ * "fixed text, not AI-drafted" reasoning as follow-up-templates.ts and
+ * support/templates.ts: a proactive outbound notice has no inbound message
+ * to react to, so there's nothing for the guardrail loop to validate
+ * against.
+ *
+ * Every template — whether a full branded HTML document (order received/
+ * shipped, prescription written, the abandoned-cart drip sequence) or the
+ * plain wrapEmailHtml-wrapped fallback (renderConversationReplyEmail, for
+ * AI-drafted replies) — carries the CAN-SPAM required footer (physical
+ * address + one-click unsubscribe link), so there's no per-template
+ * special-casing to get wrong.
+ *
+ * GENESIS_PHYSICAL_ADDRESS must be set to a real mailing address before any
+ * of these go out for real — see .env.example. There is no known real
+ * address hardcoded anywhere in this file (unlike some templates elsewhere
+ * in this codebase that hardcode a literal address): every footer reads it
+ * from the env var, falling back to a placeholder only so local dev/tests
+ * don't need it set.
+ *
+ * Pricing figures below are the exact approved numbers from
+ * lib/messaging/knowledge-catalog.ts (month-to-month tier only, to keep the
+ * template's price box simple) — never quote a different number here
+ * without updating the catalog too, since the two must stay in sync.
+ */
+
+const PHYSICAL_ADDRESS_FALLBACK = "Genesis Health";
+
+function physicalAddress(): string {
+  return process.env.GENESIS_PHYSICAL_ADDRESS ?? PHYSICAL_ADDRESS_FALLBACK;
+}
+
+const PORTAL_URL = "https://patient.trygenesis.com/login";
+
+export interface RenderedEmail {
+  readonly subject: string;
+  readonly html: string;
+}
+
+/**
+ * Crude but dependency-free HTML→text, used two ways: turning a parsed
+ * inbound email's HTML-only body into something the guardrail/AI turn can
+ * read (email-inbound.service.ts), and turning an outbound template's
+ * rendered HTML into the plain-text record stored as conversation history
+ * (send-trigger-email.ts) — that history is what a later inbound turn's
+ * toEmailPreviewBody/toSupportEmailPreviewBody feeds back to the model, so
+ * it must never contain raw markup.
+ */
+export function htmlToPlainText(html: string): string {
+  return html
+    // <style>/<script> block content isn't visible markup — stripping only
+    // the tags (as this function used to) leaves the CSS/JS text itself
+    // behind as if it were body copy. Comments (including MSO conditional
+    // comments the templates use for Outlook) get the same treatment.
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function wrapEmailHtml(bodyHtml: string, unsubscribeUrl: string): string {
+  return (
+    `<div style="font-family: -apple-system, sans-serif; font-size: 15px; line-height: 1.5; color: #1a1a1a; max-width: 600px;">` +
+    `${bodyHtml}` +
+    `<hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0 12px;" />` +
+    `<p style="font-size: 12px; color: #888;">${physicalAddress()}<br/>` +
+    `<a href="${unsubscribeUrl}" style="color: #888;">Unsubscribe</a> from future emails.</p>` +
+    `</div>`
+  );
+}
+
+export function renderOrderReceivedEmail(firstName: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to Genesis Health</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .steps-box { background-color: #f1f5f4; border: 1px solid #dde5e3; border-radius: 4px; padding: 26px 28px; margin: 0 0 26px 0; }
+  .step-row { font-size: 14px; line-height: 22px; color: #3f4a47; margin: 0 0 16px 0; }
+  .step-row:last-child { margin-bottom: 0; }
+  .step-number { display: inline-block; width: 22px; height: 22px; background-color: #0d9488; color: #ffffff; border-radius: 50%; text-align: center; line-height: 22px; font-weight: bold; font-size: 12px; margin-right: 8px; }
+  .step-title { color: #12312b; font-weight: bold; }
+  .cta-wrapper { text-align: center; margin: 32px 0; }
+  .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; padding: 16px 38px; border-radius: 4px; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Welcome, ${name}.</p>
+
+        <p class="paragraph">Thank you for choosing Genesis Health. You've just taken the first step toward a healthier, more confident version of yourself — and we're glad to be part of that journey with you.</p>
+
+        <p class="paragraph">Your visit has been received, and our licensed medical team is already reviewing your information to build a treatment plan around your goals.</p>
+
+        <div class="steps-box">
+          <p class="step-row"><span class="step-number">1</span><span class="step-title">Clinical Review</span><br>Our medical team reviews your visit and confirms your personalized treatment plan.</p>
+          <p class="step-row"><span class="step-number">2</span><span class="step-title">Approval &amp; Prescription</span><br>Once approved, your prescription is sent directly to our licensed pharmacy partner.</p>
+          <p class="step-row"><span class="step-number">3</span><span class="step-title">Shipping</span><br>Your medication is prepared and shipped discreetly straight to your door.</p>
+          <p class="step-row"><span class="step-number">4</span><span class="step-title">Ongoing Support</span><br>Your care team stays with you for questions, adjustments, and support along the way.</p>
+        </div>
+
+        <p class="paragraph">You can track your visit, message your care team, and manage refills anytime through your patient portal.</p>
+
+        <div class="cta-wrapper">
+          <a href="${PORTAL_URL}" class="cta-button">Go To Patient Login</a>
+        </div>
+
+        <p class="paragraph">If you have any questions along the way, just reply to this email and our team will help.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">Here's to your journey — we're glad you're on it.<br><!--[if mso]>&nbsp;<![endif]--><br>Warmly,<br>The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "Welcome to Genesis Health — Your Journey Starts Now", html };
+}
+
+export function renderPrescriptionWrittenEmail(firstName: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Genesis Health prescription has been approved</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .status-box { background-color: #12312b; border-radius: 4px; padding: 26px 24px; margin: 0 0 26px 0; text-align: center; }
+  .status-label { font-size: 11px; letter-spacing: 2px; color: #9db4ae; text-transform: uppercase; margin: 0 0 8px 0; }
+  .status-value { font-size: 22px; color: #ffffff; margin: 0; font-weight: 700; }
+  .steps-box { background-color: #f1f5f4; border: 1px solid #dde5e3; border-radius: 4px; padding: 26px 28px; margin: 0 0 26px 0; }
+  .step-row { font-size: 14px; line-height: 22px; color: #3f4a47; margin: 0 0 16px 0; }
+  .step-row:last-child { margin-bottom: 0; }
+  .step-number { display: inline-block; width: 22px; height: 22px; background-color: #0d9488; color: #ffffff; border-radius: 50%; text-align: center; line-height: 22px; font-weight: bold; font-size: 12px; margin-right: 8px; }
+  .step-title { color: #12312b; font-weight: bold; }
+  .cta-wrapper { text-align: center; margin: 32px 0; }
+  .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; padding: 16px 38px; border-radius: 4px; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Dear ${name},</p>
+
+        <p class="paragraph">Great news — your prescription has been approved by our licensed medical team.</p>
+
+        <div class="status-box">
+          <p class="status-label">Prescription Status</p>
+          <p class="status-value">Approved</p>
+        </div>
+
+        <p class="paragraph">Your treatment plan is now being sent to our pharmacy partner to be prepared specifically for you.</p>
+
+        <div class="steps-box">
+          <p class="step-row"><span class="step-number">1</span><span class="step-title">Prescription Approved</span><br>Your care team has confirmed your personalized treatment plan. <em>You are here.</em></p>
+          <p class="step-row"><span class="step-number">2</span><span class="step-title">Pharmacy Preparation</span><br>Your medication is compounded and prepared by our licensed pharmacy partner.</p>
+          <p class="step-row"><span class="step-number">3</span><span class="step-title">Shipping</span><br>Your order ships discreetly straight to your door, with tracking sent by email.</p>
+          <p class="step-row"><span class="step-number">4</span><span class="step-title">Ongoing Support</span><br>Your care team stays with you for questions, adjustments, and support along the way.</p>
+        </div>
+
+        <div class="cta-wrapper">
+          <a href="${PORTAL_URL}" class="cta-button">View My Patient Portal</a>
+        </div>
+
+        <p class="paragraph">We'll let you know as soon as your order ships. In the meantime, if you have any questions about your treatment plan, we're here to help.</p>
+
+        <p class="paragraph">Questions? Just reply to this email.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">Here's to your journey — we're glad you're on it.<br><!--[if mso]>&nbsp;<![endif]--><br>Warmly,<br>The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "Your Genesis Health prescription has been approved", html };
+}
+
+export function renderOrderShippedEmail(firstName: string, trackingNumber: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Genesis Health order has shipped</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .status-box { background-color: #12312b; border-radius: 4px; padding: 26px 24px; margin: 0 0 26px 0; text-align: center; }
+  .status-label { font-size: 11px; letter-spacing: 2px; color: #9db4ae; text-transform: uppercase; margin: 0 0 8px 0; }
+  .status-value { font-size: 22px; color: #ffffff; margin: 0; font-weight: 700; }
+  .tracking-box { background-color: #f1f5f4; border: 1px solid #dde5e3; border-radius: 4px; padding: 20px 24px; margin: 0 0 26px 0; }
+  .tracking-row { font-size: 14px; color: #3f4a47; margin: 0 0 6px 0; }
+  .tracking-row:last-child { margin-bottom: 0; }
+  .tracking-label { color: #7c8a86; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; display: block; margin-bottom: 2px; }
+  .tracking-value { color: #12312b; font-weight: bold; }
+  .cta-wrapper { text-align: center; margin: 32px 0; }
+  .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; padding: 16px 38px; border-radius: 4px; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Dear ${name},</p>
+
+        <p class="paragraph">Good news — your order is on its way.</p>
+
+        <div class="status-box">
+          <p class="status-label">Order Status</p>
+          <p class="status-value">Shipped</p>
+        </div>
+
+        <p class="paragraph">Your medication was prepared by our licensed pharmacy partner and is now headed straight to your door, packaged discreetly for your privacy.</p>
+
+        <div class="tracking-box">
+          <p class="tracking-row">
+            <span class="tracking-label">Tracking Number</span>
+            <span class="tracking-value">${trackingNumber}</span>
+          </p>
+        </div>
+
+        <div class="cta-wrapper">
+          <a href="${PORTAL_URL}" class="cta-button">Track My Order</a>
+        </div>
+
+        <p class="paragraph">When your package arrives, be sure to follow the dosing instructions provided by your care team. If you have any questions about getting started or what to expect, we're here to help.</p>
+
+        <p class="paragraph">Questions? Just reply to this email.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">Here's to your journey — we're glad you're on it.<br><!--[if mso]>&nbsp;<![endif]--><br>Warmly,<br>The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "Your Genesis Health order has shipped", html };
+}
+
+/**
+ * `ctaUrl` must be a freshly-minted per-lead intake link (createIntakeLink
+ * with promo "first_month_20"), not the bare Bask questionnaire URL —
+ * clicking it is what arms the 2-hour follow-up job (see
+ * intake-links.service.ts's handleIntakeLinkClick), same as the link Joy's
+ * SMS conversation mints on action=send_form. A static, unminted link here
+ * would silently skip that automation for every email-driven signup.
+ */
+export function renderAbandonedCartOpenerEmail(firstName: string, ctaUrl: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Genesis Health visit is waiting — don't lose your spot</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .price-box { background-color: #f1f5f4; border: 1px solid #dde5e3; border-radius: 4px; padding: 20px 24px; margin: 0 0 24px 0; }
+  .price-row { font-size: 15px; color: #12312b; margin: 0 0 8px 0; }
+  .price-row:last-child { margin-bottom: 0; }
+  .price-value { color: #0d9488; font-weight: bold; }
+  .cta-wrapper { text-align: center; margin: 32px 0; }
+  .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; padding: 16px 38px; border-radius: 4px; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Dear ${name},</p>
+
+        <p class="paragraph">Your Genesis Health visit is still open — but it won't stay saved forever.</p>
+
+        <p class="paragraph">You started the process to access physician-guided treatment with real support from our licensed medical team. Don't let a few unanswered questions stand between you and your goals.</p>
+
+        <div class="price-box">
+          <p class="price-row">Compounded Semaglutide — <span class="price-value">$175/mo</span></p>
+          <p class="price-row">Compounded Tirzepatide — <span class="price-value">$225/mo</span></p>
+        </div>
+
+        <p class="paragraph"><strong>Finish now and get $20 off your first month</strong> — our way of helping you take that next step.</p>
+
+        <div class="cta-wrapper">
+          <a href="${ctaUrl}" class="cta-button">Finish My Visit Now</a>
+        </div>
+
+        <p class="paragraph">It takes just a few minutes, and our clinical team is ready to review your visit as soon as it's submitted.</p>
+
+        <p class="paragraph">Questions? Just reply to this email — we're here to help you finish strong.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "Your Genesis Health visit is waiting — don't lose your spot", html };
+}
+
+/** Abandoned-cart drip step 2 ("urgency") — fires 24 hours after abandonment. Same ctaUrl-minting requirement as renderAbandonedCartOpenerEmail. */
+export function renderAbandonedCartUrgencyEmail(firstName: string, ctaUrl: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your $20 off expires soon — finish your Genesis Health visit</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .expiry-box { background-color: #12312b; border-radius: 4px; padding: 22px 24px; margin: 0 0 24px 0; text-align: center; }
+  .expiry-label { font-size: 11px; letter-spacing: 2px; color: #9db4ae; text-transform: uppercase; margin: 0 0 8px 0; }
+  .expiry-value { font-size: 20px; color: #ffffff; margin: 0; font-weight: 700; }
+  .price-box { background-color: #f1f5f4; border: 1px solid #dde5e3; border-radius: 4px; padding: 20px 24px; margin: 0 0 24px 0; }
+  .price-row { font-size: 15px; color: #12312b; margin: 0 0 8px 0; }
+  .price-row:last-child { margin-bottom: 0; }
+  .price-value { color: #0d9488; font-weight: bold; }
+  .cta-wrapper { text-align: center; margin: 32px 0; }
+  .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; padding: 16px 38px; border-radius: 4px; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Dear ${name},</p>
+
+        <p class="paragraph">Quick reminder — your $20 off first month offer is about to expire, and your Genesis Health visit is still sitting unfinished.</p>
+
+        <div class="expiry-box">
+          <p class="expiry-label">Offer Expires</p>
+          <p class="expiry-value">Tonight at Midnight</p>
+        </div>
+
+        <p class="paragraph">Once it's gone, it's gone — but you can still lock in your discount and get started on physician-guided treatment in just a few minutes.</p>
+
+        <div class="price-box">
+          <p class="price-row">Compounded Semaglutide — <span class="price-value">$175/mo</span></p>
+          <p class="price-row">Compounded Tirzepatide — <span class="price-value">$225/mo</span></p>
+        </div>
+
+        <div class="cta-wrapper">
+          <a href="${ctaUrl}" class="cta-button">Claim My $20 Off</a>
+        </div>
+
+        <p class="paragraph">It only takes a few minutes to complete, and our clinical team will review your visit as soon as it's submitted.</p>
+
+        <p class="paragraph">Questions? Just reply to this email — we're happy to help you finish strong.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "Your $20 off expires soon — finish your Genesis Health visit", html };
+}
+
+/** Abandoned-cart drip step 3 ("educational") — fires 7 days after abandonment. Same ctaUrl-minting requirement as renderAbandonedCartOpenerEmail. */
+export function renderAbandonedCartEducationalEmail(firstName: string, ctaUrl: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>If you've tried everything, this is different</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .quote-box { background-color: #f1f5f4; border-left: 3px solid #0d9488; padding: 18px 22px; margin: 0 0 24px 0; }
+  .quote-text { font-style: italic; font-size: 16px; line-height: 25px; color: #12312b; margin: 0; }
+  .price-box { background-color: #f1f5f4; border: 1px solid #dde5e3; border-radius: 4px; padding: 20px 24px; margin: 0 0 24px 0; }
+  .price-row { font-size: 15px; color: #12312b; margin: 0 0 8px 0; }
+  .price-row:last-child { margin-bottom: 0; }
+  .price-value { color: #0d9488; font-weight: bold; }
+  .cta-wrapper { text-align: center; margin: 32px 0; }
+  .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; padding: 16px 38px; border-radius: 4px; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Dear ${name},</p>
+
+        <p class="paragraph">You've probably heard it before: "just eat less, move more." If it were that simple, you wouldn't still be looking for answers.</p>
+
+        <p class="paragraph">Willpower was never the problem. For a lot of people, appetite and metabolism are working against them — no amount of discipline changes that on its own. Diets that ignore this tend to work for a while, then stop. That's not a personal failure. It's biology.</p>
+
+        <div class="quote-box">
+          <p class="quote-text">"I'd lose 10 pounds and gain back 15. I stopped trusting that anything would actually work for me."</p>
+        </div>
+
+        <p class="paragraph">GLP-1 treatment approaches things differently. Instead of relying on willpower alone, it works with your body's own hormones to help regulate appetite — so the changes you make to your eating actually stick, instead of feeling like a constant fight.</p>
+
+        <p class="paragraph">You don't have to have it all figured out before you start. You just have to be ready to try something that works differently than what you've tried before.</p>
+
+        <div class="price-box">
+          <p class="price-row">Compounded Semaglutide — <span class="price-value">$175/mo</span></p>
+          <p class="price-row">Compounded Tirzepatide — <span class="price-value">$225/mo</span></p>
+        </div>
+
+        <div class="cta-wrapper">
+          <a href="${ctaUrl}" class="cta-button">See If I Qualify</a>
+        </div>
+
+        <p class="paragraph">A licensed provider reviews your health assessment before anything is prescribed, so you'll know exactly what to expect. No judgment, no lectures — just a plan built around what actually works.</p>
+
+        <p class="paragraph">Questions? Just reply to this email — our team is here to help.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "If you've tried everything, this is different", html };
+}
+
+/** Abandoned-cart drip step 4 ("plan_comparison", final step) — fires 10 days after abandonment. Same ctaUrl-minting requirement as renderAbandonedCartOpenerEmail. */
+export function renderAbandonedCartPlanComparisonEmail(firstName: string, ctaUrl: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Genesis Health plan is right for you?</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .section-heading { font-size: 18px; color: #12312b; margin: 30px 0 14px 0; font-weight: 700; }
+  .plan-card { background-color: #f1f5f4; border: 1px solid #dde5e3; border-radius: 4px; padding: 20px 24px; margin: 0 0 16px 0; }
+  .plan-name { font-size: 16px; color: #12312b; font-weight: bold; margin: 0 0 6px 0; }
+  .plan-price { font-size: 15px; color: #0d9488; font-weight: bold; margin: 0 0 8px 0; }
+  .plan-desc { font-size: 14px; line-height: 22px; color: #3f4a47; margin: 0; }
+  .cta-wrapper { text-align: center; margin: 32px 0; }
+  .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; padding: 16px 38px; border-radius: 4px; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td class="header">
+          <p class="logo-text">GENESIS HEALTH</p>
+        </td>
+      </tr>
+      <tr>
+        <td class="body-content">
+          <p class="greeting">Dear ${name},</p>
+
+          <p class="paragraph">If you're still deciding which Genesis Health plan fits your goals, here's a closer look at
+            what we offer — so you can choose with confidence.</p>
+
+          <p class="paragraph">All of our treatment plans connect you with a licensed provider online, who reviews your
+            health history and determines whether a prescription is appropriate. If approved, your medication ships
+            directly from a state-licensed pharmacy — no office visits required.</p>
+
+          <p class="section-heading">Our GLP-1 Plans</p>
+
+          <div class="plan-card">
+            <p class="plan-name">Compounded Semaglutide</p>
+            <p class="plan-price">$175/mo</p>
+            <p class="plan-desc">The same active ingredient found in Ozempic&reg; and Wegovy&reg;. A weekly injection
+              that helps regulate appetite and support steady, sustainable weight loss alongside nutrition and lifestyle
+              changes.</p>
+          </div>
+
+          <div class="plan-card">
+            <p class="plan-name">Compounded Tirzepatide</p>
+            <p class="plan-price">$225/mo</p>
+            <p class="plan-desc">The same active ingredient found in Mounjaro&reg; and Zepbound&reg;. A dual-action
+              weekly injection that many members choose for its potential to support greater weight loss results.</p>
+          </div>
+
+          <p class="paragraph">Every plan includes dose adjustments as needed, ongoing access to your care team, and
+            ships discreetly right to your door. Compounded medications are not FDA-approved and have not been evaluated
+            for safety or effectiveness — your provider will help you determine what's appropriate for you.</p>
+
+          <div class="cta-wrapper">
+            <a href="${ctaUrl}" class="cta-button">See If I Qualify</a>
+          </div>
+
+          <p class="paragraph">Not sure which plan is right for you? Just reply to this email and our team will walk you
+            through it.</p>
+
+          <p class="paragraph" style="margin-bottom:0;">The Genesis Health Team</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <hr class="divider" style="margin-left:40px; margin-right:40px;">
+        </td>
+      </tr>
+      <tr>
+        <td class="footer">
+          <p class="footer-text">${physicalAddress()}</p>
+          <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>`;
+  return { subject: "Which Genesis Health plan is right for you?", html };
+}
+
+/** Plain-reply wrapper for AI-drafted turn replies (Joy/Lisa email dispatch) — same wrapper, no fixed copy since the text itself is the guardrail-validated draft. */
+export function renderConversationReplyEmail(bodyText: string, unsubscribeUrl: string): string {
+  const paragraphs = bodyText
+    .split(/\n{2,}/)
+    .map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+  return wrapEmailHtml(paragraphs, unsubscribeUrl);
+}
