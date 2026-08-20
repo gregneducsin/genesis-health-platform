@@ -269,7 +269,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     key: "appetite_hunger_management",
     approvedText:
       "It's common to still feel hungry sometimes, especially early in treatment. " +
-      "Eating slowly and prioritizing protein and fiber can help for some people. " +
+      "Eating slowly, prioritizing protein and fiber, drinking enough water, and staying active can all help for some people. " +
       "If hunger doesn't improve or you're concerned, your care team can help figure out the right next step.",
     allowedParaphrase: true,
     legalStatus: "approved",
