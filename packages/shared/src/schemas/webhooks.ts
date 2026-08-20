@@ -19,29 +19,50 @@ export type GhlLeadWebhookRequest = z.infer<typeof ghlLeadWebhookRequestSchema>;
 
 // ── Bask order webhook ────────────────────────────────────────────────────────
 
-export const baskOrderWebhookRequestSchema = z.object({
-  eventId: z.string().min(1),
-  externalPersonId: z.string().min(1),
-  email: z.string().email(),
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().min(1).optional(),
-  phone: z.string().min(1).optional(),
-  // Bask's own field name — matches its native payload, not our internal
-  // purchases.orderNumber column name. The handler maps orderId -> orderNumber.
-  orderId: z.string().min(1),
-  productName: z.string().min(1),
-  // Bask sends this as a JSON number; other sources may send a formatted
-  // string. The handler normalizes either to a fixed 2-decimal string.
-  amountPaid: z.union([z.string().regex(/^\d+(\.\d{1,2})?$/), z.number().nonnegative()]),
-  // A single full timestamp — the handler derives both the purchase date
-  // (date-only) and the webhook-event occurred date from this one field,
-  // since Bask only provides one timestamp, not two.
-  purchasedAt: z.string().datetime(),
-  ecommerceOrderId: z.string().min(1).optional(),
-  // Bask's own transaction identifier — used as ecommerceOrderId when that
-  // field isn't separately provided.
-  transactionId: z.string().min(1).optional(),
-});
+export const baskOrderWebhookRequestSchema = z
+  .object({
+    eventId: z.string().min(1),
+    externalPersonId: z.string().min(1),
+    email: z.string().email(),
+    firstName: z.string().min(1).optional(),
+    lastName: z.string().min(1).optional(),
+    phone: z.string().min(1).optional(),
+    // Bask's own field name — matches its native payload, not our internal
+    // purchases.orderNumber column name. The handler maps orderId -> orderNumber.
+    orderId: z.string().min(1),
+    productName: z.string().min(1),
+    // Bask sends this as a JSON number; other sources may send a formatted
+    // string. The handler normalizes either to a fixed 2-decimal string.
+    amountPaid: z.union([z.string().regex(/^\d+(\.\d{1,2})?$/), z.number().nonnegative()]),
+    // A single full timestamp — the handler derives both the purchase date
+    // (date-only) and the webhook-event occurred date from this one field,
+    // since Bask only provides one timestamp, not two.
+    purchasedAt: z.string().datetime(),
+    ecommerceOrderId: z.string().min(1).optional(),
+    // Bask's own transaction identifier — used as ecommerceOrderId when that
+    // field isn't separately provided.
+    transactionId: z.string().min(1).optional(),
+    // Bask's own record of whether this is the customer's first order,
+    // relayed verbatim (same field name) through the Zapier zap that maps
+    // Bask's native "newOrder" webhook into this flat payload. Optional
+    // because our own "does a prior purchase row exist" DB check is the
+    // fallback when it's absent (older/misconfigured zaps). Accepts a
+    // string too — confirmed against a real Zapier payload that this can
+    // arrive as a capitalized Python-style "False"/"True" string rather
+    // than a JSON boolean — left un-transformed (no .transform()) so this
+    // stays a plain union type; a transform here breaks z.infer's
+    // output-type computation for the surrounding .passthrough() object.
+    // parseIsFirstOrder() in webhooks.service.ts does the string -> boolean
+    // coercion instead.
+    isFirstTimeOrder: z.union([z.boolean(), z.string()]).optional(),
+  })
+  // Bask's payload may include other fields we haven't modeled yet.
+  // .passthrough() (instead of the default strip-unknown-keys behavior)
+  // keeps them alive in
+  // parsed.data, so the raw payload stored in webhook_events.raw_payload by
+  // recordWebhookEventIfNew captures it on the next real delivery instead of
+  // silently discarding it before we ever get to look.
+  .passthrough();
 export type BaskOrderWebhookRequest = z.infer<typeof baskOrderWebhookRequestSchema>;
 
 // ── Bask questionnaire webhook ─────────────────────────────────────────────────

@@ -264,6 +264,141 @@ describe("Webhooks", () => {
       expect(purchases[0].orderClassificationSource).toBe("bask");
     });
 
+    it("preserves fields Bask sends that we haven't modeled yet in the stored raw payload", async () => {
+      // baskOrderWebhookRequestSchema is .passthrough(), not the default
+      // strip-unknown-keys — so a field like this survives into
+      // webhook_events.raw_payload instead of being silently dropped before
+      // we ever get to see it.
+      const res = await request(app)
+        .post("/api/webhooks/bask-order")
+        .set("x-webhook-secret", ORDER_SECRET)
+        .send({
+          eventId: "bask-order-evt-passthrough",
+          externalPersonId: "bask-person-passthrough",
+          email: "passthrough@example.com",
+          orderId: "BASK-PASSTHROUGH",
+          productName: "Program",
+          amountPaid: 199,
+          purchasedAt: "2026-02-01T10:00:00.000Z",
+          someBaskFieldNotYetModeled: "xyz",
+        });
+      expect(res.status).toBe(200);
+
+      const { db, webhookEventsTable } = await import("@luma/db");
+      const { eq, and } = await import("drizzle-orm");
+      const [event] = await db
+        .select()
+        .from(webhookEventsTable)
+        .where(and(eq(webhookEventsTable.source, "bask_order"), eq(webhookEventsTable.externalEventId, "bask-order-evt-passthrough")));
+      expect(event).toBeTruthy();
+      expect((event!.rawPayload as Record<string, unknown>).someBaskFieldNotYetModeled).toBe("xyz");
+    });
+
+    it("trusts Bask's isFirstTimeOrder=false over our own DB check, even for a customer's first purchase row in our system", async () => {
+      // This is the actual bug: a customer who ordered before this webhook
+      // existed (or whose earlier order wasn't recorded) has no prior
+      // purchase row in our DB, so our own "does an earlier row exist" check
+      // says first_order — but Bask knows they're a real repeat customer.
+      sendMessageMock.mockClear();
+      const res = await request(app)
+        .post("/api/webhooks/bask-order")
+        .set("x-webhook-secret", ORDER_SECRET)
+        .send({
+          eventId: "bask-order-evt-bask-says-recurring",
+          externalPersonId: "bask-person-recurring",
+          email: "bask-recurring@example.com",
+          firstName: "Recurring",
+          lastName: "ButNew",
+          phone: "+15551110098",
+          orderId: "BASK-RECUR-1",
+          productName: "Program",
+          amountPaid: 199,
+          purchasedAt: "2026-02-01T10:00:00.000Z",
+          isFirstTimeOrder: false,
+        });
+      expect(res.status).toBe(200);
+
+      const { db, customersTable, purchasesTable } = await import("@luma/db");
+      const { eq } = await import("drizzle-orm");
+      const [customer] = await db.select().from(customersTable).where(eq(customersTable.email, "bask-recurring@example.com"));
+      const purchases = await db.select().from(purchasesTable).where(eq(purchasesTable.customerId, customer!.id));
+      expect(purchases).toHaveLength(1);
+      expect(purchases[0].orderClassification).toBe("recurring");
+      expect(sendMessageMock).not.toHaveBeenCalled();
+    });
+
+    it("accepts a capitalized Python-style string value (confirmed from a real Zapier payload)", async () => {
+      sendMessageMock.mockClear();
+      const res = await request(app)
+        .post("/api/webhooks/bask-order")
+        .set("x-webhook-secret", ORDER_SECRET)
+        .send({
+          eventId: "bask-order-evt-string-flag",
+          externalPersonId: "bask-person-string-flag",
+          email: "string-flag@example.com",
+          orderId: "BASK-STRING-FLAG",
+          productName: "Program",
+          amountPaid: 199,
+          purchasedAt: "2026-02-01T10:00:00.000Z",
+          isFirstTimeOrder: "False",
+        });
+      expect(res.status).toBe(200);
+
+      const { db, customersTable, purchasesTable } = await import("@luma/db");
+      const { eq } = await import("drizzle-orm");
+      const [customer] = await db.select().from(customersTable).where(eq(customersTable.email, "string-flag@example.com"));
+      const purchases = await db.select().from(purchasesTable).where(eq(purchasesTable.customerId, customer!.id));
+      expect(purchases[0].orderClassification).toBe("recurring");
+    });
+
+    it("falls back to recurring instead of violating the first-order uniqueness constraint when Bask's flag disagrees with our own purchase history", async () => {
+      // Edge case: Bask says isFirstTimeOrder=true, but our DB already has an
+      // earlier purchase row for this customer (e.g. a mismatched
+      // external-identity match). Trusting Bask blindly here would attempt a
+      // second "first_order" row and crash on the partial unique index.
+      const { db, customersTable, externalIdentitiesTable, purchasesTable } = await import("@luma/db");
+      const { eq } = await import("drizzle-orm");
+      const [customer] = await db
+        .insert(customersTable)
+        .values({ firstName: "Already", lastName: "HasHistory", email: "already-has-history@example.com", leadReceivedDate: "2026-01-01" })
+        .returning();
+      await db.insert(externalIdentitiesTable).values({ personId: customer!.id, system: "bask", externalId: "bask-person-mismatch" });
+      await db.insert(purchasesTable).values({
+        customerId: customer!.id,
+        purchaseDate: "2026-01-15",
+        orderNumber: "BASK-EARLIER",
+        productName: "Program",
+        amountPaid: "199.00",
+        orderClassification: "first_order",
+        orderClassificationSource: "bask",
+      });
+
+      sendMessageMock.mockClear();
+      const res = await request(app)
+        .post("/api/webhooks/bask-order")
+        .set("x-webhook-secret", ORDER_SECRET)
+        .send({
+          eventId: "bask-order-evt-mismatch",
+          externalPersonId: "bask-person-mismatch",
+          email: "already-has-history@example.com",
+          phone: "+15551110096",
+          orderId: "BASK-MISMATCH",
+          productName: "Program",
+          amountPaid: 199,
+          purchasedAt: "2026-02-01T10:00:00.000Z",
+          isFirstTimeOrder: true,
+        });
+      expect(res.status).toBe(200);
+
+      const purchases = await db.select().from(purchasesTable).where(eq(purchasesTable.customerId, customer!.id));
+      expect(purchases).toHaveLength(2);
+      expect(purchases.find((p) => p.orderNumber === "BASK-MISMATCH")?.orderClassification).toBe("recurring");
+      // The conflict shouldn't just avoid the DB error — it also shouldn't
+      // send a "your first order!" welcome text to a customer we already
+      // have purchase history for.
+      expect(sendMessageMock).not.toHaveBeenCalled();
+    });
+
     it("creates a new customer when no match exists", async () => {
       const res = await request(app)
         .post("/api/webhooks/bask-order")

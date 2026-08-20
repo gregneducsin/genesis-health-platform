@@ -197,6 +197,16 @@ export async function handleGhlLeadWebhook(payload: GhlLeadWebhookRequest): Prom
   return { duplicate: false };
 }
 
+// payload.isFirstTimeOrder is `boolean | string | undefined` — see the
+// comment on baskOrderWebhookRequestSchema for why the string variant isn't
+// coerced in the schema itself. Confirmed against a real Zapier payload that
+// the string form can be capitalized Python-style ("False"/"True"), so this
+// compares case-insensitively rather than against a fixed "true"/"false".
+function parseIsFirstOrder(value: boolean | string | undefined): boolean | undefined {
+  if (value === undefined) return undefined;
+  return typeof value === "boolean" ? value : value.trim().toLowerCase() === "true";
+}
+
 export async function handleBaskOrderWebhook(payload: BaskOrderWebhookRequest): Promise<{ duplicate: boolean }> {
   const recorded = await recordWebhookEventIfNew("bask_order", payload.eventId, payload);
   if (!recorded) return { duplicate: true };
@@ -226,7 +236,32 @@ export async function handleBaskOrderWebhook(payload: BaskOrderWebhookRequest): 
         .select({ id: purchasesTable.id })
         .from(purchasesTable)
         .where(eq(purchasesTable.customerId, customerId));
-      isFirstOrder = !earlier;
+
+      // Bask's own isFirstOrder flag is the source of truth when it's
+      // present — it reflects the customer's real order history on Bask's
+      // side, which can predate or diverge from ours (e.g. a customer who
+      // ordered before this webhook existed looks like a "first order" by
+      // our own "does an earlier purchase row exist" check even though
+      // they're a real repeat customer). Fall back to that DB-derived check
+      // only when Bask doesn't send the flag.
+      isFirstOrder = parseIsFirstOrder(payload.isFirstTimeOrder) ?? !earlier;
+
+      // The partial unique index (purchases_customer_first_order_key) forbids
+      // a second "first_order" row for the same customer, and a customer we
+      // already have purchase history for shouldn't get a "your first
+      // order!" welcome opener regardless of who's asserting otherwise. If
+      // isFirstOrder is true here while an earlier row already exists (e.g.
+      // a mismatched external-identity match resolving two Bask customers to
+      // the same row), that's a real data conflict — fail safe as
+      // "recurring" for both the stored classification and the opener
+      // decision below, instead of crashing on the unique-index violation.
+      if (isFirstOrder && earlier) {
+        isFirstOrder = false;
+        logger.warn(
+          { customerId },
+          "Bask reported a first order for a customer we already have purchase history for — treating as recurring to avoid a duplicate first_order row; check this customer's external-identity match.",
+        );
+      }
 
       await tx.insert(purchasesTable).values({
         customerId,
@@ -235,7 +270,7 @@ export async function handleBaskOrderWebhook(payload: BaskOrderWebhookRequest): 
         productName: payload.productName,
         amountPaid,
         ecommerceOrderId: payload.ecommerceOrderId ?? payload.transactionId,
-        orderClassification: earlier ? "recurring" : "first_order",
+        orderClassification: isFirstOrder ? "first_order" : "recurring",
         orderClassificationSource: "bask",
       });
     });
