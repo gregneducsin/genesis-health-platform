@@ -23,13 +23,25 @@ export type LucyTurnResult =
     }
   | { ok: false; code: string };
 
-/** Deterministic replies for pre-check blocks — these never reach Claude. */
+/**
+ * Deterministic replies for pre-check blocks — these never reach Claude.
+ *
+ * SUITABILITY_QUESTION and MEDICAL_CONTENT get a real reply, not silence:
+ * the honest, always-safe answer to "is this safe for me" / "will you
+ * prescribe me a higher dose" is the same regardless of the specific
+ * question — it's the doctor's call, made during questionnaire review, not
+ * something Lucy is ever positioned to answer. Still routes to staff
+ * (action: "staff_review") so a human sees it, but the customer isn't left
+ * hanging in the meantime.
+ */
+const INDIVIDUALIZED_MEDICAL_REPLY = "That's up to the doctor to decide. Complete the questionnaire and they'll review your information to let you know what's approved for you.";
+
 const PRE_CHECK_RESULTS: Record<string, { action: "pause" | "staff_review"; reply: string | null }> = {
   OPT_OUT: { action: "pause", reply: "You've been unsubscribed and won't receive further messages. Reply HELP for help." },
   STOP_WORD: { action: "staff_review", reply: null },
   EMERGENCY_CONTENT: { action: "staff_review", reply: null },
-  SUITABILITY_QUESTION: { action: "staff_review", reply: null },
-  MEDICAL_CONTENT: { action: "staff_review", reply: null },
+  SUITABILITY_QUESTION: { action: "staff_review", reply: INDIVIDUALIZED_MEDICAL_REPLY },
+  MEDICAL_CONTENT: { action: "staff_review", reply: INDIVIDUALIZED_MEDICAL_REPLY },
   LEGAL_CONTENT: { action: "staff_review", reply: null },
 };
 
