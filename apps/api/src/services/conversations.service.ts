@@ -83,7 +83,7 @@ export async function listMessages(conversationId: string, limit = MAX_HISTORY_M
 }
 
 /** Builds the shape runLucyTurn expects from persisted conversation state + recent history. */
-export function toBotPreviewBody(conversation: Conversation, history: readonly ConversationMessage[]): BotPreviewRequestBody {
+export function toBotPreviewBody(conversation: Conversation, history: readonly ConversationMessage[], customerFirstName: string | null): BotPreviewRequestBody {
   return {
     messages: history.map((m) => ({ direction: m.direction, body: m.body })),
     leadSource: conversation.leadSource,
@@ -102,6 +102,7 @@ export function toBotPreviewBody(conversation: Conversation, history: readonly C
     objectionStage: conversation.objectionStage as 0 | 1 | 2,
     linkProvided: conversation.linkProvided,
     promoOffered: conversation.promoOffered,
+    customerFirstName,
   };
 }
 

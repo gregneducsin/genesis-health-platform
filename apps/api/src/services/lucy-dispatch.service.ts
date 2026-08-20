@@ -67,7 +67,13 @@ async function processInboundMessageLocked(personId: string, inboundBody: string
   const priorMessages = await listMessages(conversation.id);
   const inboundMessage = await appendMessage(conversation.id, "inbound", inboundBody);
 
-  const body = toBotPreviewBody(conversation, [...priorMessages, inboundMessage]);
+  const customer = await getCustomerContact(personId);
+  // "Unknown" is the placeholder a webhook-created customer row gets when no
+  // name was ever provided (see findOrCreateCustomerByExternalIdentity) — not
+  // a real name, so it resolves to null the same as no firstName at all.
+  const customerFirstName = customer && customer.firstName && customer.firstName !== "Unknown" ? customer.firstName : null;
+
+  const body = toBotPreviewBody(conversation, [...priorMessages, inboundMessage], customerFirstName);
   let result: LucyTurnResult;
   try {
     result = await runLucyTurn(personId, body);
@@ -93,7 +99,14 @@ async function processInboundMessageLocked(personId: string, inboundBody: string
 
   await setMessageSentiment(inboundMessage.id, result.inboundSentiment);
 
-  const customer = await getCustomerContact(personId);
+  // Guarded against overwriting a real name even though the prompt already
+  // instructs Claude never to report learnedFirstName once customerFirstName
+  // is non-null — trust but verify, same posture as every other AI-extracted
+  // field in this codebase.
+  if (result.learnedFirstName && customerFirstName === null) {
+    await db.update(customersTable).set({ firstName: result.learnedFirstName }).where(eq(customersTable.id, personId));
+  }
+
   const textsToSend = [result.reply, result.nextQuestion].filter((t): t is string => Boolean(t));
   for (const text of textsToSend) {
     await sendAndLog(conversation.id, customer?.phone ?? null, text);

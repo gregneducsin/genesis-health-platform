@@ -20,6 +20,7 @@ export type LucyTurnResult =
       knowledgeTopicsUsed: readonly string[];
       validatedSlotUpdates: Record<string, unknown>;
       source: "pre_check_block" | "model";
+      learnedFirstName: string | null;
     }
   | { ok: false; code: string };
 
@@ -113,6 +114,7 @@ export async function runLucyTurn(personId: string, body: BotPreviewRequestBody)
         knowledgeTopicsUsed: [],
         validatedSlotUpdates: {},
         source: "pre_check_block",
+        learnedFirstName: null,
       };
     }
   }
@@ -172,5 +174,6 @@ export async function runLucyTurn(personId: string, body: BotPreviewRequestBody)
     knowledgeTopicsUsed: result.knowledgeTopicsUsed,
     validatedSlotUpdates: post.validatedSlotUpdates,
     source: "model",
+    learnedFirstName: result.learnedFirstName,
   };
 }
