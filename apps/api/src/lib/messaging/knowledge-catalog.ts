@@ -241,14 +241,17 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   // ── Medication onset timing ─────────────────────────────────────────────────
   // Source: owner-confirmed 2026-08-20. General onset-timing education only —
   // never a personalized prediction of when any one customer will notice
-  // changes. Lucy-only: excluded from SARAH_TOPIC_KEYS below, same as every
-  // other clinical topic — a patient already on the medication asking this
-  // still routes to staff, not this generic answer.
+  // changes. Sarah-only: excluded from Lucy via LUCY_EXCLUDED_TOPIC_KEYS below
+  // — this is a question an existing patient already taking the medication
+  // asks, not a prospect. Wording deliberately avoids "dose"/"dosing" — Sarah's
+  // own post-check (lib/support/safety.ts's SARAH_PROHIBITED_CLINICAL_RE)
+  // unconditionally rejects those words in her reply, no topic-gate exception,
+  // so the approved text itself has to stay inside that vocabulary.
   {
     key: "medication_onset_timeline",
     approvedText:
-      "Many people notice initial appetite changes within the first few weeks of starting semaglutide or tirzepatide, though this varies from person to person and often increases as the dose is titrated upward. " +
-      "Not noticing changes yet is common early in treatment — a provider can review progress and next steps at the next dose check-in.",
+      "Many people notice initial appetite changes within the first few weeks of treatment, though this varies from person to person. " +
+      "If you haven't noticed changes yet, that's common early on — your care team can review your progress at your next check-in.",
     allowedParaphrase: true,
     legalStatus: "approved",
     clinicalStatus: "approved",
@@ -259,14 +262,15 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
 
   // ── Appetite / still feeling hungry ────────────────────────────────────────
   // Source: owner-confirmed 2026-08-20. General, non-personalized coping tips
-  // only — never tells a customer to change their own dose. Lucy-only, same
-  // reasoning as medication_onset_timeline above.
+  // only — never tells a customer to change their own dose. Sarah-only, same
+  // reasoning and same "dose"-free wording constraint as
+  // medication_onset_timeline above.
   {
     key: "appetite_hunger_management",
     approvedText:
-      "It's common to still feel hungry sometimes, especially early in treatment or as the next dose approaches. " +
+      "It's common to still feel hungry sometimes, especially early in treatment. " +
       "Eating slowly and prioritizing protein and fiber can help for some people. " +
-      "If hunger doesn't improve or there's a concern, a provider can discuss whether a dose adjustment makes sense — customers should never change their dose on their own.",
+      "If hunger doesn't improve or you're concerned, your care team can help figure out the right next step.",
     allowedParaphrase: true,
     legalStatus: "approved",
     clinicalStatus: "approved",
@@ -631,8 +635,12 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
  * how_luma_works_after_purchase: written entirely from "after your order
  * comes in..." — premature and wrong for a prospect who hasn't ordered yet.
  * Lucy has her own pre-purchase version, how_luma_works.
+ *
+ * medication_onset_timeline and appetite_hunger_management: both are
+ * questions an existing patient already taking the medication asks, not a
+ * prospect deciding whether to sign up — see each topic's own comment.
  */
-const LUCY_EXCLUDED_TOPIC_KEYS = new Set(["portal_help", "how_luma_works_after_purchase"]);
+const LUCY_EXCLUDED_TOPIC_KEYS = new Set(["portal_help", "how_luma_works_after_purchase", "medication_onset_timeline", "appetite_hunger_management"]);
 
 /** All topics available for the development bot-test preview. */
 export function getPreviewEnabledTopics(): readonly KnowledgeTopic[] {
@@ -670,6 +678,14 @@ export const APPROVED_REVIEW_WRITE_URL = "";
  * tirzepatide/Mounjaro/Zepbound) — see the topic-gated rule in
  * lib/support/safety.ts.
  *
+ * medication_onset_timeline and appetite_hunger_management are the other two
+ * exceptions, for the same reason: general, non-personalized education (when
+ * effects typically start, coping with residual hunger) that an existing
+ * patient legitimately asks Sarah, not individualized clinical guidance.
+ * Both are worded to avoid "dose"/"mg"/"side effect" — see each topic's own
+ * comment for why: Sarah's SARAH_PROHIBITED_CLINICAL_RE rejects those words
+ * in her reply unconditionally, with no topic-gate exception.
+ *
  * how_luma_works_after_purchase, not how_luma_works: the latter is written
  * entirely for a prospect who hasn't signed up yet (select a plan, complete
  * the questionnaire) — wrong framing for every patient Sarah talks to, who's
@@ -686,6 +702,8 @@ export const SARAH_TOPIC_KEYS = new Set([
   "auto_refill",
   "portal_help",
   "compounded_medication",
+  "medication_onset_timeline",
+  "appetite_hunger_management",
 ]);
 
 /** Topics available to Sarah's conversation loop. */
