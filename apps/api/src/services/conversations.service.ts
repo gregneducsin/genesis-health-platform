@@ -1,6 +1,8 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { db, conversationsTable, conversationMessagesTable, customersTable, type Conversation, type ConversationMessage } from "@luma/db";
 import type { BotPreviewRequestBody } from "../lib/messaging/types.js";
+import { getSmsProvider } from "../lib/sms-provider.js";
+import { logger } from "../lib/logger.js";
 
 const MAX_HISTORY_MESSAGES = 20;
 
@@ -184,4 +186,33 @@ export async function getConversationDetail(
   if (!row) return null;
   const messages = await listMessages(conversationId, 200);
   return { conversation: row.conversation, customer: { firstName: row.firstName, lastName: row.lastName, phone: row.phone }, messages };
+}
+
+export type StaffReplyResult = { readonly sent: true } | { readonly sent: false; readonly reason: "not_found" | "no_phone" | "send_failed" };
+
+/**
+ * A human-authored reply to an SMS conversation — logs the message
+ * regardless of send outcome (same fail-soft reasoning as lucy-dispatch.service.ts's
+ * sendAndLog), only clears needsAttention on an actual successful send.
+ */
+export async function sendStaffReply(conversationId: string, body: string): Promise<StaffReplyResult> {
+  const detail = await getConversationDetail(conversationId);
+  if (!detail) return { sent: false, reason: "not_found" };
+  if (!detail.customer.phone) return { sent: false, reason: "no_phone" };
+
+  let providerMessageId: string | null = null;
+  let sendFailed = false;
+  try {
+    const result = await getSmsProvider().sendMessage(detail.customer.phone, body);
+    providerMessageId = result.providerMessageId;
+  } catch (err) {
+    sendFailed = true;
+    logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "staff reply send failed");
+  }
+
+  await appendMessage(conversationId, "outbound", body, { providerMessageId });
+  if (sendFailed) return { sent: false, reason: "send_failed" };
+
+  await clearNeedsAttention(conversationId);
+  return { sent: true };
 }

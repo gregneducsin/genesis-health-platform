@@ -69,20 +69,19 @@ export function createSupportConversationsRouter(): RouterType {
     }
   });
 
-  // Email-only for now — see the identical note on conversations.routes.ts's
-  // /reply route: no SMS provider is wired up yet.
+  // Same fail-soft-until-a-provider-exists reasoning as
+  // conversations.routes.ts's /reply route.
   router.post("/:id/reply", requireRole("admin", "manager"), requireCsrf, async (req, res, next) => {
     try {
-      if (channelFromQuery(req) !== "email") {
-        res.status(400).json({ error: "Dashboard reply is only available for email conversations right now." });
-        return;
-      }
       const parsed = sendSupportConversationReplyRequestSchema.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Invalid payload.", details: parsed.error.issues });
         return;
       }
-      const result = await sendEmailStaffReply(req.params.id as string, parsed.data.body);
+      const result =
+        channelFromQuery(req) === "email"
+          ? await sendEmailStaffReply(req.params.id as string, parsed.data.body)
+          : await supportConversationsService.sendStaffReply(req.params.id as string, parsed.data.body);
       if (!result.sent && result.reason === "not_found") {
         res.status(404).json({ error: "Conversation not found." });
         return;

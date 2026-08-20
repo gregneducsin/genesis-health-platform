@@ -126,7 +126,7 @@ function SupportConversationList({
   );
 }
 
-/** A staff-authored reply — email only, since no SMS provider is wired up yet. */
+/** A staff-authored reply — sent through the real SMS or email provider (per channel) and logged into the conversation like any other outbound message. */
 function StaffReplyBox({ conversationId, channel }: { conversationId: string; channel: SupportConversationChannel }) {
   const [text, setText] = useState("");
   const sendReply = useSendStaffReply();
@@ -143,14 +143,23 @@ function StaffReplyBox({ conversationId, channel }: { conversationId: string; ch
   return (
     <div className="mt-2">
       <div className="flex items-center gap-2">
-        <Input className="flex-1" placeholder="Reply as staff (email)…" value={text} onChange={(e) => setText(e.target.value)} disabled={sendReply.isPending} />
+        <Input
+          className="flex-1"
+          placeholder={channel === "email" ? "Reply as staff (email)…" : "Reply as staff…"}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          disabled={sendReply.isPending}
+        />
         <Button onClick={handleSend} disabled={sendReply.isPending || !text.trim()}>
           {sendReply.isPending ? "Sending…" : "Send reply"}
         </Button>
       </div>
-      <p className="mt-1 text-[11px] text-gray-400">Sent as an email, greeted and signed off the same way an AI-drafted reply would be.</p>
+      {channel === "email" && (
+        <p className="mt-1 text-[11px] text-gray-400">Sent as an email, greeted and signed off the same way an AI-drafted reply would be.</p>
+      )}
       {sendReply.isSuccess && sendReply.data.sent === false && (
         <p className="mt-1 text-xs text-red-600">
+          {sendReply.data.reason === "no_phone" && "No phone number on file — nothing was sent."}
           {sendReply.data.reason === "send_failed" && "Send failed — the message was logged, but nothing actually went out."}
         </p>
       )}
@@ -221,7 +230,7 @@ function SupportConversationDetailPanel({ conversationId, channel }: { conversat
                 {clearAttention.isPending ? "Marking…" : "Mark reviewed"}
               </Button>
             </div>
-            {channel === "email" && <StaffReplyBox conversationId={conversation.id} channel={channel} />}
+            <StaffReplyBox conversationId={conversation.id} channel={channel} />
           </div>
         )}
       </div>

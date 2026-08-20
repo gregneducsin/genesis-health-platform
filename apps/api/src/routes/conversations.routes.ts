@@ -75,23 +75,21 @@ export function createConversationsRouter(): RouterType {
     }
   });
 
-  // Email-only for now — SMS has no provider wired up yet (sms-provider.ts
-  // throws until one is chosen), so there's nothing for an SMS staff reply
-  // to send through. Re-enable the SMS branch (mirroring
-  // conversations.service.ts's sendStaffReply on the Luma sibling app) once
-  // a real SMS provider lands here.
+  // SMS sends through sms-provider.ts, which throws until a real provider is
+  // configured (see its own docstring) — so this fails soft with
+  // reason: "send_failed" today and starts working automatically once a
+  // provider is wired in, same as every other SMS send site in this app.
   router.post("/:id/reply", requireRole("admin", "manager"), requireCsrf, async (req, res, next) => {
     try {
-      if (channelFromQuery(req) !== "email") {
-        res.status(400).json({ error: "Dashboard reply is only available for email conversations right now." });
-        return;
-      }
       const parsed = sendConversationReplyRequestSchema.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Invalid payload.", details: parsed.error.issues });
         return;
       }
-      const result = await sendEmailStaffReply(req.params.id as string, parsed.data.body);
+      const result =
+        channelFromQuery(req) === "email"
+          ? await sendEmailStaffReply(req.params.id as string, parsed.data.body)
+          : await conversationsService.sendStaffReply(req.params.id as string, parsed.data.body);
       if (!result.sent && result.reason === "not_found") {
         res.status(404).json({ error: "Conversation not found." });
         return;
