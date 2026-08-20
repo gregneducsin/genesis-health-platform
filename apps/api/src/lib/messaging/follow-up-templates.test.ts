@@ -23,9 +23,9 @@ describe("renderFollowUpMessage", () => {
     });
   }
 
-  it("provider_check_in introduces Joy by name and company", () => {
+  it("provider_check_in does not re-introduce Joy — the opener already did, hours earlier in the same thread", () => {
     const text = renderFollowUpMessage("provider_check_in", "Jamie");
-    expect(text).toContain("this is Joy with Genesis Health");
+    expect(text).not.toContain("this is Joy with Genesis Health");
   });
 });
 
