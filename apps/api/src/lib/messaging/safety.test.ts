@@ -82,8 +82,13 @@ describe("interactivePreCheck", () => {
     expect(interactivePreCheck("How long does shipping take?")).toEqual({ blocked: false });
   });
 
-  it("still blocks medication questions that aren't about shipping timing", () => {
-    expect(interactivePreCheck("How long until my medication starts working?")).toEqual({ blocked: true, code: "MEDICAL_CONTENT" });
+  it("does not block plain onset-timing questions despite containing 'medication'", () => {
+    expect(interactivePreCheck("How long until my medication starts working?")).toEqual({ blocked: false });
+    expect(interactivePreCheck("When will I start seeing results?")).toEqual({ blocked: false });
+  });
+
+  it("still blocks medication questions that aren't about shipping or onset timing", () => {
+    expect(interactivePreCheck("Will this medication interact badly with my other medication?")).toEqual({ blocked: true, code: "MEDICAL_CONTENT" });
   });
 
   it("blocks legal content", () => {

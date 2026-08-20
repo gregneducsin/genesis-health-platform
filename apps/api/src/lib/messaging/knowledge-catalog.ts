@@ -238,6 +238,43 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     enabledForPreview: true,
   },
 
+  // ── Medication onset timing ─────────────────────────────────────────────────
+  // Source: owner-confirmed 2026-08-20. General onset-timing education only —
+  // never a personalized prediction of when any one customer will notice
+  // changes. Lucy-only: excluded from SARAH_TOPIC_KEYS below, same as every
+  // other clinical topic — a patient already on the medication asking this
+  // still routes to staff, not this generic answer.
+  {
+    key: "medication_onset_timeline",
+    approvedText:
+      "Many people notice initial appetite changes within the first few weeks of starting semaglutide or tirzepatide, though this varies from person to person and often increases as the dose is titrated upward. " +
+      "Not noticing changes yet is common early in treatment — a provider can review progress and next steps at the next dose check-in.",
+    allowedParaphrase: true,
+    legalStatus: "approved",
+    clinicalStatus: "approved",
+    lastReviewedDate: "2026-08-20",
+    prohibitedClaims: ["guaranteed_onset_timeline", "specific_day_or_week_promise", "personal_response_prediction"],
+    enabledForPreview: true,
+  },
+
+  // ── Appetite / still feeling hungry ────────────────────────────────────────
+  // Source: owner-confirmed 2026-08-20. General, non-personalized coping tips
+  // only — never tells a customer to change their own dose. Lucy-only, same
+  // reasoning as medication_onset_timeline above.
+  {
+    key: "appetite_hunger_management",
+    approvedText:
+      "It's common to still feel hungry sometimes, especially early in treatment or as the next dose approaches. " +
+      "Eating slowly and prioritizing protein and fiber can help for some people. " +
+      "If hunger doesn't improve or there's a concern, a provider can discuss whether a dose adjustment makes sense — customers should never change their dose on their own.",
+    allowedParaphrase: true,
+    legalStatus: "approved",
+    clinicalStatus: "approved",
+    lastReviewedDate: "2026-08-20",
+    prohibitedClaims: ["independent_dose_change", "guaranteed_appetite_suppression", "personalized_dietary_prescription"],
+    enabledForPreview: true,
+  },
+
   // ── Insurance and payment options ─────────────────────────────────────────
   // Source: lucy-knowledge-v1 §INSURANCE AND PAYMENT OPTIONS
   {

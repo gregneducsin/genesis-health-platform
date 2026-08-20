@@ -42,4 +42,16 @@ describe("Lucy/Sarah topic-list separation", () => {
     expect(enrollment?.legalStatus).toBe("approved");
     expect(enrollment?.enabledForPreview).toBe(true);
   });
+
+  it("medication_onset_timeline and appetite_hunger_management are Lucy-only — approved and preview-enabled, but excluded from Sarah's topic list", () => {
+    const lucyKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
+    const sarahKeys = new Set(getSarahEnabledTopics().map((t) => t.key));
+    for (const key of ["medication_onset_timeline", "appetite_hunger_management"]) {
+      const topic = getTopicByKey(key);
+      expect(topic?.legalStatus).toBe("approved");
+      expect(topic?.clinicalStatus).toBe("approved");
+      expect(lucyKeys.has(key)).toBe(true);
+      expect(sarahKeys.has(key)).toBe(false);
+    }
+  });
 });

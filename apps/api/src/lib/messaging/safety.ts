@@ -173,9 +173,10 @@ const LEGAL_SUE_RE = /\bsu(?:e|es|ed|ing)\b/i;
  * pre-check and routed to staff review even though shipping_delivery is an
  * approved, pre-vetted knowledge topic that answers exactly this question —
  * Claude never got the chance to use it. Deliberately narrow (get/receive/
- * arrive/ship verbs only) so it doesn't also catch a genuinely clinical
- * question like "how long until my medication starts working," which asks
- * about drug efficacy onset, not delivery, and must still be blocked.
+ * arrive/ship verbs only) so it doesn't also catch a drug-efficacy-onset
+ * question like "how long until my medication starts working" — that one is
+ * handled by ONSET_TIMING_PHRASES_LOWER below instead, once
+ * medication_onset_timeline exists as its own approved knowledge topic.
  */
 const SHIPPING_TIMING_PHRASES_LOWER = [
   "how long will it take to get my",
@@ -199,6 +200,35 @@ const SHIPPING_TIMING_PHRASES_LOWER = [
   "when is my order arriving",
   "how long does shipping take",
   "how long does delivery take",
+] as const;
+
+/**
+ * Plain "when will I notice it working" questions — general drug-onset
+ * education, backed by the approved medication_onset_timeline topic (never a
+ * personalized prediction). Checked with the same priority as
+ * SHIPPING_TIMING_PHRASES_LOWER above and for the same reason: "medication"
+ * alone shouldn't block a question with a real approved answer.
+ */
+const ONSET_TIMING_PHRASES_LOWER = [
+  "how long until it starts working",
+  "how long until my medication starts working",
+  "how long before it starts working",
+  "how long does it take to start working",
+  "how long does it take to work",
+  "how long before it works",
+  "how long until it works",
+  "how long before i see results",
+  "how long until i see results",
+  "how long before i notice",
+  "how long until i notice",
+  "when will i start seeing results",
+  "when will i see results",
+  "when will i notice a difference",
+  "when will i feel a difference",
+  "when does it start working",
+  "when will it start working",
+  "how long until it kicks in",
+  "when does it kick in",
 ] as const;
 
 /**
@@ -255,7 +285,7 @@ export type InteractivePreCheckResult = { readonly blocked: false } | { readonly
  * Check the last inbound message for content that must never reach the
  * provider. Returns the block code or { blocked: false }.
  *
- * Priority order: opt_out > STOP_WORD > emergency > suitability > shipping timing > medical > legal.
+ * Priority order: opt_out > STOP_WORD > emergency > suitability > shipping timing > onset timing > medical > legal.
  *
  * Opt-out (code "OPT_OUT") takes the highest priority and is terminal —
  * no objection handling, no rebuttal, no provider call.
@@ -289,6 +319,12 @@ export function interactivePreCheck(lastInbound: string): InteractivePreCheckRes
   // long will it take to get my medication?" must not be blocked just
   // because it contains "medication" — see SHIPPING_TIMING_PHRASES_LOWER.
   if (SHIPPING_TIMING_PHRASES_LOWER.some((w) => lower.includes(w))) {
+    return { blocked: false };
+  }
+  // Same reasoning for drug-onset timing — "how long until my medication
+  // starts working?" has a real approved answer (medication_onset_timeline)
+  // that a blanket "medication" block would otherwise never let Claude use.
+  if (ONSET_TIMING_PHRASES_LOWER.some((w) => lower.includes(w))) {
     return { blocked: false };
   }
   if (MEDICAL_WORDS_LOWER.some((w) => lower.includes(w))) {
