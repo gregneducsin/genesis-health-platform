@@ -21,6 +21,8 @@ export type LucyTurnResult =
       validatedSlotUpdates: Record<string, unknown>;
       source: "pre_check_block" | "model";
       learnedFirstName: string | null;
+      /** Which pre-check code (if any) routed this turn to staff — null when the turn wasn't a pre-check block. Used to explain WHY a conversation got flagged needsAttention, not just that it did. */
+      preCheckCode: string | null;
     }
   | { ok: false; code: string };
 
@@ -115,6 +117,7 @@ export async function runLucyTurn(personId: string, body: BotPreviewRequestBody)
         validatedSlotUpdates: {},
         source: "pre_check_block",
         learnedFirstName: null,
+        preCheckCode: pre.code,
       };
     }
   }
@@ -182,5 +185,6 @@ export async function runLucyTurn(personId: string, body: BotPreviewRequestBody)
     validatedSlotUpdates: post.validatedSlotUpdates,
     source: "model",
     learnedFirstName: result.learnedFirstName,
+    preCheckCode: null,
   };
 }

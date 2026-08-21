@@ -13,6 +13,7 @@ import {
 import { getSmsProvider } from "../lib/sms-provider.js";
 import { logger } from "../lib/logger.js";
 import { withPersonLock } from "../lib/db-lock.js";
+import { describeNeedsAttentionReason } from "../lib/messaging/needs-attention-reason.js";
 
 async function getCustomerContact(personId: string): Promise<{ firstName: string; phone: string | null } | undefined> {
   const [row] = await db.select({ firstName: customersTable.firstName, phone: customersTable.phone }).from(customersTable).where(eq(customersTable.id, personId));
@@ -89,7 +90,7 @@ async function processInboundMessageLocked(personId: string, inboundBody: string
     // human should see that" treatment as the !result.ok branch below, not
     // a log line nobody's watching.
     logger.error({ personId, conversationId: conversation.id, reason: err instanceof Error ? err.message : String(err) }, "Lucy turn threw unexpectedly — no outbound message sent");
-    await updateConversationState(conversation.id, { needsAttention: true });
+    await updateConversationState(conversation.id, { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "exception" }) });
     return { ok: false, code: "UNEXPECTED_ERROR" };
   }
 
@@ -97,7 +98,7 @@ async function processInboundMessageLocked(personId: string, inboundBody: string
     logger.warn({ personId, conversationId: conversation.id, code: result.code }, "Lucy turn rejected — no outbound message sent");
     // The customer got silence, not just a routed reply — that's exactly the
     // kind of thing a human should see, not just a log line.
-    await updateConversationState(conversation.id, { needsAttention: true });
+    await updateConversationState(conversation.id, { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "rejected", code: result.code }) });
     return result;
   }
 
@@ -128,7 +129,9 @@ async function processInboundMessageLocked(personId: string, inboundBody: string
     objectionStage: result.objectionStage,
     linkProvided: result.linkProvided,
     promoOffered: result.promoOffered,
-    ...(result.requiresStaff ? { needsAttention: true } : {}),
+    ...(result.requiresStaff
+      ? { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "staff_flagged", preCheckCode: result.preCheckCode }) }
+      : {}),
   });
 
   return result;

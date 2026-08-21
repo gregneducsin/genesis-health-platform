@@ -113,6 +113,13 @@
       "when": 1787336395538,
       "tag": "0015_thick_spirit",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787336750420,
+      "tag": "0016_hard_cobalt_man",
+      "breakpoints": true
     }
   ]
 }

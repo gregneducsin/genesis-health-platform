@@ -42,6 +42,7 @@ function okResult(overrides: Partial<Extract<SarahTurnResult, { ok: true }>> = {
     requiresStaff: false,
     knowledgeTopicsUsed: [],
     source: "model",
+    preCheckCode: null,
     ...overrides,
   };
 }

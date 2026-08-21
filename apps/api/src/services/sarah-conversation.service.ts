@@ -14,6 +14,8 @@ export type SarahTurnResult =
       requiresStaff: boolean;
       knowledgeTopicsUsed: readonly string[];
       source: "pre_check_block" | "model";
+      /** Which pre-check code (if any) routed this turn to staff — null when the turn wasn't a pre-check block. Used to explain WHY a conversation got flagged needsAttention, not just that it did. */
+      preCheckCode: string | null;
     }
   | { ok: false; code: string };
 
@@ -49,6 +51,7 @@ export async function runSarahTurn(body: SarahPreviewRequestBody): Promise<Sarah
         requiresStaff: deterministic.action === "staff_review",
         knowledgeTopicsUsed: [],
         source: "pre_check_block",
+        preCheckCode: pre.code,
       };
     }
   }
@@ -93,5 +96,6 @@ export async function runSarahTurn(body: SarahPreviewRequestBody): Promise<Sarah
     requiresStaff: result.requiresStaff,
     knowledgeTopicsUsed: result.knowledgeTopicsUsed,
     source: "model",
+    preCheckCode: null,
   };
 }

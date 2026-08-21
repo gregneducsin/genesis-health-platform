@@ -48,6 +48,7 @@ function okResult(overrides: Partial<Extract<LucyTurnResult, { ok: true }>> = {}
     validatedSlotUpdates: {},
     source: "model",
     learnedFirstName: null,
+    preCheckCode: null,
     ...overrides,
   };
 }
