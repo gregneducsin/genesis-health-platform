@@ -211,6 +211,7 @@ export const unmatchedEmailThreadsTable = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     fromAddress: text("from_address").notNull(),
     fromName: text("from_name"),
+    collectedPhone: text("collected_phone"),
     aiIntent: text("ai_intent"),
     aiSummary: text("ai_summary"),
     suggestedMatchCustomerId: uuid("suggested_match_customer_id").references(() => customersTable.id, { onDelete: "set null" }),
