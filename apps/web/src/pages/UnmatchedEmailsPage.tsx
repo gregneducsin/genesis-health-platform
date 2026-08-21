@@ -147,11 +147,12 @@ export function UnmatchedEmailsPage() {
         {data && <p className="text-sm text-gray-500">{needsReview.length} awaiting review</p>}
       </div>
       <p className="text-xs text-gray-400">
-        Inbound email from an address that doesn't match any customer record, grouped one thread per sender. On the first message, a fixed,
-        content-free acknowledgment goes out immediately (asking for their name if we don't have it) so nobody sits in silence — that's the only
-        thing sent with no review. Beyond that, Claude drafts a classification and a suggested reply for staff to review and send or dismiss.
-        Suggested matches to an existing customer are never linked automatically. If Claude is confident it's a genuine new lead and we know their
-        name, a lead is created automatically and this message is handed straight to Joy's real pipeline — she replies live, same as any other lead.
+        Inbound email from an address that doesn't match any customer record, grouped one thread per sender. Replies are auto-sent by default: a
+        fixed acknowledgment goes out on the first message (asking for their name if we don't have it), and Claude's own drafted reply goes out
+        on every message after that. Threads only land here for review when Claude flags genuine uncertainty (or an individualized medical/
+        suitability question), or when the sender looks like a possible match to an existing customer, or claims to already have an account —
+        those never auto-link or auto-send. Once we know their name and Claude is confident it's a genuine new lead, a lead is created
+        automatically and the message is handed straight to Joy's real pipeline — she takes it from there, same as any other lead.
       </p>
 
       {isLoading && <p className="text-sm text-gray-400">Loading…</p>}
