@@ -26,10 +26,12 @@ import { createBaskQuestionnaireWebhookRouter } from "./routes/webhooks/bask-que
 import { createBaskPaymentFailedWebhookRouter } from "./routes/webhooks/bask-payment-failed.routes.js";
 import { createBaskPrescriptionWrittenWebhookRouter } from "./routes/webhooks/bask-prescription-written.routes.js";
 import { createBaskOrderShippedWebhookRouter } from "./routes/webhooks/bask-order-shipped.routes.js";
+import { createIbluSendMessageWebhookRouter } from "./routes/webhooks/iblusend-message.routes.js";
 import { createGmailOAuthRouter } from "./routes/gmail-oauth.routes.js";
 import { createGmailRouter } from "./routes/gmail.routes.js";
 import { createNeedsAttentionRouter } from "./routes/needs-attention.routes.js";
 import { createUnmatchedEmailsRouter } from "./routes/unmatched-emails.routes.js";
+import { createUnmatchedSmsRouter } from "./routes/unmatched-sms.routes.js";
 import { createReportingRouter } from "./routes/reporting.routes.js";
 import { createEmailUnsubscribeRouter } from "./routes/email-unsubscribe.routes.js";
 
@@ -41,7 +43,17 @@ export function createApp(): Express {
   app.use(security);
   app.use(requestLogger);
   app.use(corsMiddleware);
-  app.use(express.json());
+  // rawBody is stashed for the iBluSend webhook route, which must verify an
+  // HMAC signature over the exact bytes sent — a re-serialized JSON.stringify
+  // of the parsed body is not guaranteed byte-identical (whitespace, key
+  // order), so the signature check needs the original buffer, not req.body.
+  app.use(
+    express.json({
+      verify: (req, _res, buf) => {
+        (req as Request).rawBody = buf;
+      },
+    }),
+  );
   app.use(cookieParser());
 
   // Never cache API responses.
@@ -92,6 +104,7 @@ export function createApp(): Express {
   app.use("/api/app/payroll/marketing-spend", createMarketingSpendRouter());
   app.use("/api/app/needs-attention", createNeedsAttentionRouter());
   app.use("/api/app/unmatched-emails", createUnmatchedEmailsRouter());
+  app.use("/api/app/unmatched-sms", createUnmatchedSmsRouter());
   app.use("/api/app/reporting", createReportingRouter());
   app.use("/api/app/gmail", createGmailRouter());
 
@@ -106,6 +119,7 @@ export function createApp(): Express {
   app.use("/api/webhooks/bask-payment-failed", createBaskPaymentFailedWebhookRouter());
   app.use("/api/webhooks/bask-prescription-written", createBaskPrescriptionWrittenWebhookRouter());
   app.use("/api/webhooks/bask-order-shipped", createBaskOrderShippedWebhookRouter());
+  app.use("/api/webhooks/iblusend-message", createIbluSendMessageWebhookRouter());
 
   app.use(errorHandler);
 
