@@ -13,6 +13,8 @@ import {
 import { getSmsProvider } from "../lib/sms-provider.js";
 import { logger } from "../lib/logger.js";
 import { withPersonLock } from "../lib/db-lock.js";
+import { isCustomerSmsDnd, setCustomerSmsDnd } from "./dnd.service.js";
+import { scheduleObjectionReengagement } from "./objection-reengagement.service.js";
 import { describeNeedsAttentionReason } from "../lib/messaging/needs-attention-reason.js";
 
 async function getCustomerContact(personId: string): Promise<{ firstName: string; phone: string | null } | undefined> {
@@ -26,8 +28,18 @@ async function getCustomerContact(personId: string): Promise<{ firstName: string
  * provider configured yet) doesn't erase the fact that this is what Lucy's
  * guardrail-approved reply actually was. Failures are logged, not thrown;
  * this function never blocks the caller on a transport problem.
+ *
+ * DND is checked here rather than earlier in the pipeline, so a customer's
+ * own OPT_OUT confirmation reply still goes out: processInboundMessageLocked
+ * sends this turn's texts before it flips the DND flag, so this check only
+ * ever blocks a *later* turn's sends, never the opt-out confirmation itself.
  */
-async function sendAndLog(conversationId: string, phone: string | null, text: string): Promise<void> {
+async function sendAndLog(personId: string, conversationId: string, phone: string | null, text: string): Promise<void> {
+  if (await isCustomerSmsDnd(personId)) {
+    logger.warn({ personId, conversationId }, "outbound Lucy message not sent: customer is do-not-disturb");
+    return;
+  }
+
   let providerMessageId: string | null = null;
   if (phone) {
     try {
@@ -114,7 +126,13 @@ async function processInboundMessageLocked(personId: string, inboundBody: string
 
   const textsToSend = [result.reply, result.nextQuestion].filter((t): t is string => Boolean(t));
   for (const text of textsToSend) {
-    await sendAndLog(conversation.id, customer?.phone ?? null, text);
+    await sendAndLog(personId, conversation.id, customer?.phone ?? null, text);
+  }
+
+  // Set DND only after this turn's texts have gone out, so the OPT_OUT
+  // confirmation reply above isn't itself blocked by the flag it's about to set.
+  if (result.preCheckCode === "OPT_OUT") {
+    await setCustomerSmsDnd(personId, true);
   }
 
   const slotPatch: ConversationStatePatch = {};
@@ -127,12 +145,20 @@ async function processInboundMessageLocked(personId: string, inboundBody: string
     lastQuestion: result.nextQuestion,
     lastDraft: result.reply,
     objectionStage: result.objectionStage,
+    objectionKey: result.objectionKey,
     linkProvided: result.linkProvided,
     promoOffered: result.promoOffered,
     ...(result.requiresStaff
       ? { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "staff_flagged", preCheckCode: result.preCheckCode }) }
       : {}),
   });
+
+  // "No problem, I'll leave it here for whenever you're ready" is a
+  // stand-down for THIS conversation, not the end of outreach — see
+  // objection-reengagement.service.ts.
+  if (result.objectionKey === "think_about_it" && result.objectionStage === 2) {
+    await scheduleObjectionReengagement(personId, conversation.leadSource);
+  }
 
   return result;
 }

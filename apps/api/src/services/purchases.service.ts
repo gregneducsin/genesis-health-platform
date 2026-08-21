@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, lte, sql, getTableColumns } from "drizzle-orm";
 import { db, customersTable, purchasesTable, purchaseClassificationAuditsTable, type PurchaseStatus } from "@luma/db";
 import type { CreatePurchaseRequest, ListPurchasesQuery, PurchasesSummaryQuery, UpdatePurchaseRequest } from "@luma/shared";
-import { setCustomerEmailDnd } from "./dnd.service.js";
+import { setCustomerSmsDnd, setCustomerEmailDnd } from "./dnd.service.js";
 
 export async function listPurchasesForCustomer(customerId: string) {
   return db
@@ -118,8 +118,9 @@ export async function createPurchase(customerId: string, input: CreatePurchaseRe
     return inserted;
   });
 
-  // A purchase is treated as fresh consent to be messaged again by email —
-  // see dnd.service.ts's setCustomerEmailDnd docstring.
+  // A purchase is treated as fresh consent to be messaged again, on both
+  // channels independently — see dnd.service.ts's setCustomerSmsDnd docstring.
+  await setCustomerSmsDnd(customerId, false);
   await setCustomerEmailDnd(customerId, false);
 
   return purchase;

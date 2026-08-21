@@ -22,7 +22,7 @@ import { scheduleAbandonedCartEmailSequence } from "./abandoned-cart-email.servi
 import { sendMetaLeadOpener } from "./meta-lead.service.js";
 import { scheduleMetaLeadEmailSequence } from "./meta-lead-email.service.js";
 import { sendOrderReceivedOpener, handlePrescriptionWritten, handleOrderShipped } from "./order-fulfillment.service.js";
-import { setCustomerEmailDnd } from "./dnd.service.js";
+import { setCustomerSmsDnd, setCustomerEmailDnd } from "./dnd.service.js";
 import { logger } from "../lib/logger.js";
 
 /**
@@ -275,11 +275,12 @@ export async function handleBaskOrderWebhook(payload: BaskOrderWebhookRequest): 
       });
     });
 
-    // A purchase is treated as fresh consent to be messaged again by email —
-    // cleared before the opener below so a previously opted-out customer's
-    // order confirmation isn't itself blocked by a now-stale DND flag.
-    // Applies to every order, new or recurring — a refill is exactly as much
-    // fresh consent as a first order.
+    // A purchase is treated as fresh consent to be messaged again, on both
+    // channels independently — cleared before the opener below so a
+    // previously opted-out customer's order confirmation isn't itself
+    // blocked by a now-stale DND flag. Applies to every order, new or
+    // recurring — a refill is exactly as much fresh consent as a first order.
+    await setCustomerSmsDnd(customerId, false);
     await setCustomerEmailDnd(customerId, false);
 
     // Sarah's opening "doctor is reviewing it" welcome message fires the

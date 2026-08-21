@@ -13,6 +13,7 @@ import {
 import { getSmsProvider } from "../lib/sms-provider.js";
 import { logger } from "../lib/logger.js";
 import { withPersonLock } from "../lib/db-lock.js";
+import { isCustomerSmsDnd, setCustomerSmsDnd } from "./dnd.service.js";
 import { describeNeedsAttentionReason } from "../lib/messaging/needs-attention-reason.js";
 
 async function getCustomerContact(personId: string): Promise<{ firstName: string; phone: string | null } | undefined> {
@@ -20,8 +21,17 @@ async function getCustomerContact(personId: string): Promise<{ firstName: string
   return row;
 }
 
-/** Same fail-soft send+log pattern as Lucy's dispatch (lucy-dispatch.service.ts's sendAndLog). */
-async function sendAndLog(conversationId: string, phone: string | null, text: string): Promise<void> {
+/**
+ * Same fail-soft send+log pattern as Lucy's dispatch (lucy-dispatch.service.ts's
+ * sendAndLog), including the same DND-checked-here-not-earlier reasoning — see
+ * that function's docstring.
+ */
+async function sendAndLog(personId: string, conversationId: string, phone: string | null, text: string): Promise<void> {
+  if (await isCustomerSmsDnd(personId)) {
+    logger.warn({ personId, conversationId }, "outbound Sarah message not sent: customer is do-not-disturb");
+    return;
+  }
+
   let providerMessageId: string | null = null;
   if (phone) {
     try {
@@ -78,7 +88,13 @@ async function processInboundSupportMessageLocked(personId: string, inboundBody:
   const customer = await getCustomerContact(personId);
   const textsToSend = [result.reply, result.nextQuestion].filter((t): t is string => Boolean(t));
   for (const text of textsToSend) {
-    await sendAndLog(conversation.id, customer?.phone ?? null, text);
+    await sendAndLog(personId, conversation.id, customer?.phone ?? null, text);
+  }
+
+  // Set DND only after this turn's texts have gone out — see the identical
+  // comment in lucy-dispatch.service.ts's processInboundMessageLocked.
+  if (result.preCheckCode === "OPT_OUT") {
+    await setCustomerSmsDnd(personId, true);
   }
 
   const statePatch: SupportConversationStatePatch = {

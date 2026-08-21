@@ -4,6 +4,7 @@ import { getOrCreateConversation, appendMessage } from "./conversations.service.
 import { getSmsProvider } from "../lib/sms-provider.js";
 import { renderCurrentlyTakingCheckin, renderReengagementCheckin } from "../lib/messaging/follow-up-templates.js";
 import { logger } from "../lib/logger.js";
+import { isCustomerSmsDnd } from "./dnd.service.js";
 
 const CHECKIN_DELAY_MS = 6 * 24 * 60 * 60 * 1000;
 
@@ -76,9 +77,21 @@ export async function sweepLeadCheckinTriggers(): Promise<LeadCheckinSweepResult
       continue;
     }
 
-    const [customer] = await db.select({ firstName: customersTable.firstName, phone: customersTable.phone }).from(customersTable).where(eq(customersTable.id, trigger.personId));
+    if (await isCustomerSmsDnd(trigger.personId)) {
+      await db.update(leadCheckinTriggersTable).set({ status: "cancelled", cancelledReason: "opted_out" }).where(eq(leadCheckinTriggersTable.id, trigger.id));
+      cancelledCount++;
+      continue;
+    }
+
+    const [customer] = await db
+      .select({ firstName: customersTable.firstName, phone: customersTable.phone })
+      .from(customersTable)
+      .where(eq(customersTable.id, trigger.personId));
     const conversation = await getOrCreateConversation(trigger.personId);
     const nextAttemptCount = trigger.attemptCount + 1;
+
+    // No email leg here — no real template exists yet for the lead-checkin
+    // emails (see templates.ts), so this stays SMS-only until one arrives.
 
     if (!customer?.phone) {
       await db

@@ -527,6 +527,42 @@ describe("Webhooks", () => {
       expect(purchases.find((p) => p.orderNumber === "BASK-REFILL-1")!.orderClassification).toBe("first_order");
       expect(purchases.find((p) => p.orderNumber === "BASK-REFILL-2")!.orderClassification).toBe("recurring");
     });
+
+    it("clears a previously opted-out customer's DND flag on both channels, so the order-received opener isn't itself blocked", async () => {
+      sendMessageMock.mockClear();
+      sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_lisa_opener_dnd" });
+
+      const { db, customersTable, externalIdentitiesTable } = await import("@luma/db");
+      const [customer] = await db
+        .insert(customersTable)
+        .values({ firstName: "Winback", lastName: "Customer", email: "winback@example.com", leadReceivedDate: "2026-01-01", phone: "+15551110098" })
+        .returning();
+      await db.insert(externalIdentitiesTable).values({ personId: customer!.id, system: "bask", externalId: "bask-person-winback" });
+
+      const { setCustomerSmsDnd, isCustomerSmsDnd, setCustomerEmailDnd, isCustomerEmailDnd } = await import("../../services/dnd.service.js");
+      await setCustomerSmsDnd(customer!.id, true);
+      await setCustomerEmailDnd(customer!.id, true);
+      expect(await isCustomerSmsDnd(customer!.id)).toBe(true);
+      expect(await isCustomerEmailDnd(customer!.id)).toBe(true);
+
+      const res = await request(app)
+        .post("/api/webhooks/bask-order")
+        .set("x-webhook-secret", ORDER_SECRET)
+        .send({
+          eventId: "bask-order-evt-winback",
+          externalPersonId: "bask-person-winback",
+          email: "winback@example.com",
+          orderId: "BASK-WINBACK-1",
+          productName: "Program",
+          amountPaid: 120,
+          purchasedAt: "2026-02-08T09:00:00.000Z",
+        });
+      expect(res.status).toBe(200);
+
+      expect(await isCustomerSmsDnd(customer!.id)).toBe(false);
+      expect(await isCustomerEmailDnd(customer!.id)).toBe(false);
+      expect(sendMessageMock).toHaveBeenCalledWith("+15551110098", expect.stringContaining("this is Lisa"));
+    });
   });
 
   describe("Bask prescription written", () => {

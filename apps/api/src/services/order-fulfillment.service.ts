@@ -6,6 +6,7 @@ import { getSmsProvider } from "../lib/sms-provider.js";
 import { renderOrderReceivedMessage, renderPrescriptionWrittenMessage, renderOrderShippedMessage, renderReviewRequestMessage } from "../lib/support/templates.js";
 import { renderOrderReceivedEmail, renderPrescriptionWrittenEmail, renderOrderShippedEmail } from "../lib/email/templates.js";
 import { sendTriggerEmail } from "../lib/email/send-trigger-email.js";
+import { isCustomerSmsDnd } from "./dnd.service.js";
 import { logger } from "../lib/logger.js";
 
 /**
@@ -50,7 +51,8 @@ export async function sendOrderReceivedOpener(personId: string): Promise<void> {
 
   const conversation = await getOrCreateSupportConversation(personId);
 
-  if (customer.phone) {
+  const dnd = await isCustomerSmsDnd(personId);
+  if (customer.phone && !dnd) {
     const text = renderOrderReceivedMessage(customer.firstName);
     try {
       const result = await getSmsProvider().sendMessage(customer.phone, text);
@@ -61,7 +63,7 @@ export async function sendOrderReceivedOpener(personId: string): Promise<void> {
       await appendSupportMessage(conversation.id, "outbound", text, {});
     }
   } else {
-    logger.warn({ personId }, "order-received opener SMS not sent: no phone number on file");
+    logger.warn({ personId, reason: dnd ? "do_not_disturb" : "no_phone_number" }, "order-received opener SMS not sent");
   }
 
   const emailConversation = await getOrCreateSupportEmailConversation(personId);
@@ -82,7 +84,8 @@ export async function handlePrescriptionWritten(personId: string): Promise<void>
   const conversation = await getOrCreateSupportConversation(personId);
   await updateSupportConversationState(conversation.id, { prescriptionWritten: true, prescriptionWrittenAt: new Date() });
 
-  if (customer?.phone) {
+  const dnd = await isCustomerSmsDnd(personId);
+  if (customer?.phone && !dnd) {
     const text = renderPrescriptionWrittenMessage(customer.firstName);
     try {
       const result = await getSmsProvider().sendMessage(customer.phone, text);
@@ -92,7 +95,7 @@ export async function handlePrescriptionWritten(personId: string): Promise<void>
       await appendSupportMessage(conversation.id, "outbound", text, {});
     }
   } else {
-    logger.warn({ personId }, "prescription-written notice not sent: no phone number on file");
+    logger.warn({ personId, reason: dnd ? "do_not_disturb" : "no_phone_number" }, "prescription-written notice not sent");
   }
 
   if (customer) {
@@ -118,7 +121,8 @@ export async function handleOrderShipped(personId: string, trackingNumber: strin
   const conversation = await getOrCreateSupportConversation(personId);
   await updateSupportConversationState(conversation.id, { orderShipped: true, orderShippedAt: new Date(), trackingNumber });
 
-  if (customer?.phone) {
+  const dnd = await isCustomerSmsDnd(personId);
+  if (customer?.phone && !dnd) {
     const text = renderOrderShippedMessage(customer.firstName, trackingNumber);
     try {
       const result = await getSmsProvider().sendMessage(customer.phone, text);
@@ -128,7 +132,7 @@ export async function handleOrderShipped(personId: string, trackingNumber: strin
       await appendSupportMessage(conversation.id, "outbound", text, {});
     }
   } else {
-    logger.warn({ personId }, "order-shipped notice not sent: no phone number on file");
+    logger.warn({ personId, reason: dnd ? "do_not_disturb" : "no_phone_number" }, "order-shipped notice not sent");
   }
 
   if (customer) {
@@ -157,6 +161,7 @@ export async function handleOrderShipped(personId: string, trackingNumber: strin
 export interface ReviewRequestSweepResult {
   readonly sentCount: number;
   readonly failedCount: number;
+  readonly cancelledCount: number;
 }
 
 /**
@@ -188,8 +193,18 @@ export async function sweepReviewRequestTriggers(): Promise<ReviewRequestSweepRe
 
   let sentCount = 0;
   let failedCount = 0;
+  let cancelledCount = 0;
 
   for (const trigger of claimed) {
+    if (await isCustomerSmsDnd(trigger.personId)) {
+      await db
+        .update(reviewRequestTriggersTable)
+        .set({ status: "cancelled", cancelledReason: "opted_out" })
+        .where(eq(reviewRequestTriggersTable.id, trigger.id));
+      cancelledCount++;
+      continue;
+    }
+
     const customer = await getCustomerContact(trigger.personId);
     const conversation = await getOrCreateSupportConversation(trigger.personId);
     const nextAttemptCount = trigger.attemptCount + 1;
@@ -217,6 +232,9 @@ export async function sweepReviewRequestTriggers(): Promise<ReviewRequestSweepRe
         .set({ status: "sent", sentAt: sql`now()`, providerMessageId: result.providerMessageId, attemptCount: nextAttemptCount })
         .where(eq(reviewRequestTriggersTable.id, trigger.id));
       sentCount++;
+
+      // No email leg here — no real template exists yet for the review-
+      // request email (see templates.ts), so this stays SMS-only for now.
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       await appendSupportMessage(conversation.id, "outbound", text, {});
@@ -228,9 +246,9 @@ export async function sweepReviewRequestTriggers(): Promise<ReviewRequestSweepRe
     }
   }
 
-  if (sentCount > 0 || failedCount > 0) {
-    logger.info({ sentCount, failedCount }, "review-request sweep completed");
+  if (sentCount > 0 || failedCount > 0 || cancelledCount > 0) {
+    logger.info({ sentCount, failedCount, cancelledCount }, "review-request sweep completed");
   }
 
-  return { sentCount, failedCount };
+  return { sentCount, failedCount, cancelledCount };
 }

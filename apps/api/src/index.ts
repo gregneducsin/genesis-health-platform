@@ -6,6 +6,7 @@ import { sweepAbandonedCartTriggers } from "./services/abandoned-cart.service.js
 // sweepReviewRequestTriggers import removed — see the "Review-request sweep"
 // comment below for why it's not registered on an interval right now.
 import { sweepLeadCheckinTriggers } from "./services/lead-checkin.service.js";
+import { sweepObjectionReengagementTriggers } from "./services/objection-reengagement.service.js";
 import { sweepAbandonedCartEmailTriggers } from "./services/abandoned-cart-email.service.js";
 import { sweepMetaLeadEmailTriggers } from "./services/meta-lead-email.service.js";
 import { sweepInboundEmail } from "./services/email-inbound.service.js";
@@ -56,6 +57,15 @@ setInterval(() => {
     logger.error({ err }, "lead check-in sweep failed");
   });
 }, LEAD_CHECKIN_SWEEP_INTERVAL_MS);
+
+// Objection re-engagement is due 2 weeks out — same coarse tick as the
+// lead-checkin sweep above is plenty precise for a delay measured in weeks.
+const OBJECTION_REENGAGEMENT_SWEEP_INTERVAL_MS = 30 * 60 * 1000;
+setInterval(() => {
+  sweepObjectionReengagementTriggers().catch((err) => {
+    logger.error({ err }, "objection re-engagement sweep failed");
+  });
+}, OBJECTION_REENGAGEMENT_SWEEP_INTERVAL_MS);
 
 // Same tight tick as the SMS abandoned-cart sweep above — the email
 // sequence's finest-grained step (the opener) has the identical 10-minute

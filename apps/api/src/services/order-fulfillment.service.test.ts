@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, customersTable, reviewRequestTriggersTable } from "@luma/db";
+import { setCustomerSmsDnd } from "./dnd.service.js";
 
 const sendMessageMock = vi.fn();
 vi.mock("../lib/sms-provider.js", async () => {
@@ -45,6 +46,14 @@ describe("sendOrderReceivedOpener", () => {
   it("does not call the provider when there's no phone on file", async () => {
     sendMessageMock.mockClear();
     const personId = await seedCustomer({ phone: null });
+    await sendOrderReceivedOpener(personId);
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("does not call the provider when the customer is SMS do-not-disturb", async () => {
+    sendMessageMock.mockClear();
+    const personId = await seedCustomer();
+    await setCustomerSmsDnd(personId, true);
     await sendOrderReceivedOpener(personId);
     expect(sendMessageMock).not.toHaveBeenCalled();
   });
@@ -127,7 +136,24 @@ describe("sweepReviewRequestTriggers", () => {
 
     sendMessageMock.mockClear();
     const result = await sweepReviewRequestTriggers();
-    expect(result).toEqual({ sentCount: 0, failedCount: 0 });
+    expect(result).toEqual({ sentCount: 0, failedCount: 0, cancelledCount: 0 });
     expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  // Arming is disabled for Genesis Health (see above), but the sweep's DND
+  // guard is still live code — exercise it directly against a manually
+  // inserted trigger row rather than relying on handleOrderShipped to arm one.
+  it("cancels a due trigger when the customer is SMS do-not-disturb", async () => {
+    sendMessageMock.mockClear();
+    const personId = await seedCustomer();
+    await setCustomerSmsDnd(personId, true);
+    await db.insert(reviewRequestTriggersTable).values({ personId, dueAt: new Date(Date.now() - 60_000) });
+
+    const result = await sweepReviewRequestTriggers();
+    expect(result.cancelledCount).toBe(1);
+    expect(sendMessageMock).not.toHaveBeenCalled();
+    const [trigger] = await db.select().from(reviewRequestTriggersTable).where(eq(reviewRequestTriggersTable.personId, personId));
+    expect(trigger.status).toBe("cancelled");
+    expect(trigger.cancelledReason).toBe("opted_out");
   });
 });

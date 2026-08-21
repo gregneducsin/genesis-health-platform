@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { db, customersTable, conversationsTable } from "@luma/db";
+import { db, customersTable, conversationsTable, objectionReengagementTriggersTable } from "@luma/db";
 import type { LucyTurnResult } from "./lucy-conversation.service.js";
+import { isCustomerSmsDnd, setCustomerSmsDnd, setCustomerEmailDnd } from "./dnd.service.js";
 
 const runLucyTurnMock = vi.fn();
 vi.mock("./lucy-conversation.service.js", async () => {
@@ -40,6 +41,7 @@ function okResult(overrides: Partial<Extract<LucyTurnResult, { ok: true }>> = {}
     nextQuestion: "Which plan are you considering?",
     link: null,
     objectionStage: 0,
+    objectionKey: null,
     linkProvided: false,
     promoOffered: false,
     inboundSentiment: "neutral",
@@ -78,6 +80,53 @@ describe("processInboundMessage", () => {
     expect(messages[0].sentiment).toBe("positive");
     expect(messages[1].providerMessageId).toBe("msg_1");
     expect(messages[2].providerMessageId).toBe("msg_2");
+  });
+
+  it("persists objectionKey alongside objectionStage", async () => {
+    runLucyTurnMock.mockClear();
+    sendMessageMock.mockClear();
+    sendMessageMock.mockResolvedValue({ providerMessageId: "msg_obj" });
+    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "price", objectionStage: 1 }));
+
+    const personId = await seedCustomer();
+    await processInboundMessage(personId, "still thinking about the cost");
+
+    const conversation = await getOrCreateConversation(personId);
+    const [row] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversation.id));
+    expect(row.objectionKey).toBe("price");
+    expect(row.objectionStage).toBe(1);
+  });
+
+  it("schedules a 2-week re-engagement text once think_about_it reaches stand-down", async () => {
+    runLucyTurnMock.mockClear();
+    sendMessageMock.mockClear();
+    sendMessageMock.mockResolvedValue({ providerMessageId: "msg_standdown" });
+    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "think_about_it", objectionStage: 2, nextQuestion: null }));
+
+    const personId = await seedCustomer();
+    await processInboundMessage(personId, "nah I don't think I'm ready");
+
+    const [trigger] = await db.select().from(objectionReengagementTriggersTable).where(eq(objectionReengagementTriggersTable.personId, personId));
+    expect(trigger).toBeDefined();
+    expect(trigger.status).toBe("pending");
+  });
+
+  it("does NOT schedule a re-engagement text for a different objection reaching stage 2, or think_about_it at an earlier stage", async () => {
+    runLucyTurnMock.mockClear();
+    sendMessageMock.mockClear();
+    sendMessageMock.mockResolvedValue({ providerMessageId: "msg_other" });
+
+    const otherObjectionPersonId = await seedCustomer();
+    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "price", objectionStage: 2, nextQuestion: null }));
+    await processInboundMessage(otherObjectionPersonId, "no thanks");
+    let triggers = await db.select().from(objectionReengagementTriggersTable).where(eq(objectionReengagementTriggersTable.personId, otherObjectionPersonId));
+    expect(triggers).toHaveLength(0);
+
+    const earlyStagePersonId = await seedCustomer();
+    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "think_about_it", objectionStage: 0 }));
+    await processInboundMessage(earlyStagePersonId, "let me think about it");
+    triggers = await db.select().from(objectionReengagementTriggersTable).where(eq(objectionReengagementTriggersTable.personId, earlyStagePersonId));
+    expect(triggers).toHaveLength(0);
   });
 
   it("passes the customer's known first name to runLucyTurn, and null for the 'Unknown' placeholder", async () => {
@@ -289,5 +338,57 @@ describe("processInboundMessage", () => {
 
     const rows = await db.select().from(conversationsTable).where(eq(conversationsTable.personId, personId));
     expect(rows.length).toBe(1);
+  });
+
+  it("sends the OPT_OUT confirmation reply, then marks the customer DND — the confirmation itself is not blocked", async () => {
+    runLucyTurnMock.mockClear();
+    sendMessageMock.mockClear();
+    sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_optout" });
+    runLucyTurnMock.mockResolvedValueOnce(
+      okResult({
+        action: "pause",
+        reply: "You've been unsubscribed and won't receive further messages. Reply HELP for help.",
+        nextQuestion: null,
+        requiresStaff: false,
+        source: "pre_check_block",
+        preCheckCode: "OPT_OUT",
+      }),
+    );
+
+    const personId = await seedCustomer();
+    expect(await isCustomerSmsDnd(personId)).toBe(false);
+
+    await processInboundMessage(personId, "STOP");
+
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    expect(sendMessageMock).toHaveBeenCalledWith("+15551230000", "You've been unsubscribed and won't receive further messages. Reply HELP for help.");
+    expect(await isCustomerSmsDnd(personId)).toBe(true);
+  });
+
+  it("does not send anything to a customer who is already do-not-disturb", async () => {
+    runLucyTurnMock.mockClear();
+    sendMessageMock.mockClear();
+    runLucyTurnMock.mockResolvedValueOnce(okResult());
+
+    const personId = await seedCustomer();
+    await setCustomerSmsDnd(personId, true);
+
+    await processInboundMessage(personId, "how much is tirzepatide?");
+
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("still sends SMS when the customer is only email do-not-disturb — the two channels are independent", async () => {
+    runLucyTurnMock.mockClear();
+    sendMessageMock.mockClear();
+    sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_email_dnd_only" });
+    runLucyTurnMock.mockResolvedValueOnce(okResult({ nextQuestion: null }));
+
+    const personId = await seedCustomer();
+    await setCustomerEmailDnd(personId, true);
+
+    await processInboundMessage(personId, "how much is tirzepatide?");
+
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
   });
 });
