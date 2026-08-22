@@ -102,6 +102,42 @@ describe("runLucyTurn", () => {
     }
   });
 
+  it("lets a model-generated turn handle a short topic-naming reply to our own last question, instead of pre-check-blocking it as MEDICAL_CONTENT", async () => {
+    // Real production case: Lucy asked "is there something specific about
+    // the process you'd like me to go over?" and the customer answered
+    // "Medication and plans" — a bare medical-word match on an unprompted
+    // question would have blocked this; body.lastQuestion is what tells
+    // interactivePreCheck this was actually just answering us.
+    callClaudeInteractiveMock.mockClear();
+    callClaudeInteractiveMock.mockResolvedValueOnce(modelResult());
+    const personId = await seedCustomer();
+    const result = await runLucyTurn(
+      personId,
+      baseBody({
+        messages: [{ direction: "inbound", body: "Medication and plans" }],
+        lastQuestion: "Is there something specific about the process you'd like me to go over?",
+      }),
+    );
+
+    expect(callClaudeInteractiveMock).toHaveBeenCalledOnce();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.source).toBe("model");
+    }
+  });
+
+  it("still pre-check-blocks a short medical-word reply as MEDICAL_CONTENT when we hadn't asked anything", async () => {
+    callClaudeInteractiveMock.mockClear();
+    const personId = await seedCustomer();
+    const result = await runLucyTurn(personId, baseBody({ messages: [{ direction: "inbound", body: "Medication and plans" }], lastQuestion: null }));
+
+    expect(callClaudeInteractiveMock).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.action).toBe("staff_review");
+    }
+  });
+
   it("fails closed with the guardrail's rejection code when post-check rejects the model's reply", async () => {
     callClaudeInteractiveMock.mockClear();
     callClaudeInteractiveMock.mockResolvedValueOnce(modelResult({ reply: "We accept insurance.", knowledgeTopicsUsed: ["insurance_payment"] }));
