@@ -68,6 +68,23 @@ describe("runSarahTurn", () => {
     }
   });
 
+  it("routes a cold-chain concern to staff_review via pre-check, no provider call, but still points the patient to the portal instead of leaving them in silence", async () => {
+    callSarahInteractiveMock.mockClear();
+    const result = await runSarahTurn(
+      baseBody({ messages: [{ direction: "inbound", body: "One ice pack on one side. Hot to the touch providing no refrigeration at all!" }] }),
+    );
+
+    expect(callSarahInteractiveMock).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.action).toBe("staff_review");
+      expect(result.requiresStaff).toBe(true);
+      expect(result.reply).toMatch(/portal/i);
+      expect(result.reply).toContain("https://patient.trygenesis.com/login");
+      expect(result.preCheckCode).toBe("COLD_CHAIN_CONCERN");
+    }
+  });
+
   it("fails closed with the guardrail's rejection code when post-check rejects the model's reply", async () => {
     callSarahInteractiveMock.mockClear();
     callSarahInteractiveMock.mockResolvedValueOnce(modelResult({ reply: "Your semaglutide dose is being increased." }));
