@@ -13,8 +13,7 @@ import { QuestionnairesPage } from "./pages/QuestionnairesPage";
 import { ConversationsPage } from "./pages/ConversationsPage";
 import { SupportPage } from "./pages/SupportPage";
 import { NeedsAttentionPage } from "./pages/NeedsAttentionPage";
-import { UnmatchedEmailsPage } from "./pages/UnmatchedEmailsPage";
-import { UnmatchedSmsPage } from "./pages/UnmatchedSmsPage";
+import { UnmatchedContactsPage } from "./pages/UnmatchedContactsPage";
 import { ReportingPage } from "./pages/ReportingPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -97,15 +96,9 @@ export default function App() {
         </ProtectedRoute>
       </Route>
 
-      <Route path="/unmatched-emails">
+      <Route path="/unmatched-contacts">
         <ProtectedRoute roles={["admin", "employee"]}>
-          <UnmatchedEmailsPage />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/unmatched-sms">
-        <ProtectedRoute roles={["admin", "employee"]}>
-          <UnmatchedSmsPage />
+          <UnmatchedContactsPage />
         </ProtectedRoute>
       </Route>
 

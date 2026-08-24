@@ -11,8 +11,7 @@ import { AiAssistantWidget } from "./AiAssistantWidget";
 const NAV_ITEMS: readonly { href: string; label: string; roles: readonly AuthUser["role"][] }[] = [
   { href: "/", label: "Dashboard", roles: ["admin"] },
   { href: "/needs-attention", label: "Needs Attention", roles: ["admin", "employee"] },
-  { href: "/unmatched-emails", label: "Unmatched Emails", roles: ["admin", "employee"] },
-  { href: "/unmatched-sms", label: "Unmatched Texts", roles: ["admin", "employee"] },
+  { href: "/unmatched-contacts", label: "Unmatched Contacts", roles: ["admin", "employee"] },
   { href: "/customers", label: "Leads", roles: ["admin", "manager"] },
   { href: "/orders", label: "Orders", roles: ["admin", "manager"] },
   { href: "/questionnaires", label: "Questionnaires", roles: ["admin"] },
@@ -34,9 +33,10 @@ export function Layout({ children }: { children: ReactNode }) {
   const { data: needsAttentionData } = useNeedsAttentionList(canSeeNeedsAttention);
   const needsAttentionCount = needsAttentionData?.items.length ?? 0;
   const { data: unmatchedEmailsData } = useUnmatchedEmailsList(canSeeNeedsAttention);
-  const unmatchedEmailsCount = unmatchedEmailsData?.items.filter((i) => i.status === "needs_review").length ?? 0;
   const { data: unmatchedSmsData } = useUnmatchedSmsList(canSeeNeedsAttention);
-  const unmatchedSmsCount = unmatchedSmsData?.items.filter((i) => i.status === "needs_review").length ?? 0;
+  const unmatchedContactsCount =
+    (unmatchedEmailsData?.items.filter((i) => i.status === "needs_review").length ?? 0) +
+    (unmatchedSmsData?.items.filter((i) => i.status === "needs_review").length ?? 0);
   const visibleNavItems = NAV_ITEMS.filter((item) => !role || item.roles.includes(role));
 
   return (
@@ -58,8 +58,7 @@ export function Layout({ children }: { children: ReactNode }) {
               >
                 {item.label}
                 {item.href === "/needs-attention" && needsAttentionCount > 0 && <Badge color="red">{needsAttentionCount}</Badge>}
-                {item.href === "/unmatched-emails" && unmatchedEmailsCount > 0 && <Badge color="yellow">{unmatchedEmailsCount}</Badge>}
-                {item.href === "/unmatched-sms" && unmatchedSmsCount > 0 && <Badge color="yellow">{unmatchedSmsCount}</Badge>}
+                {item.href === "/unmatched-contacts" && unmatchedContactsCount > 0 && <Badge color="yellow">{unmatchedContactsCount}</Badge>}
               </Link>
             ))}
           </nav>
