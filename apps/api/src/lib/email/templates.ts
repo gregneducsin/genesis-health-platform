@@ -168,6 +168,90 @@ export function renderOrderReceivedEmail(firstName: string, unsubscribeUrl: stri
   return { subject: "Welcome to Genesis Health — Your Journey Starts Now", html };
 }
 
+export function renderRefillOrderReceivedEmail(firstName: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>We've received your Genesis Health refill order</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .status-box { background-color: #12312b; border-radius: 4px; padding: 26px 24px; margin: 0 0 26px 0; text-align: center; }
+  .status-label { font-size: 11px; letter-spacing: 2px; color: #9db4ae; text-transform: uppercase; margin: 0 0 8px 0; }
+  .status-value { font-size: 22px; color: #ffffff; margin: 0; font-weight: 700; }
+  .cta-wrapper { text-align: center; margin: 32px 0; }
+  .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; padding: 16px 38px; border-radius: 4px; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Hi ${name},</p>
+
+        <p class="paragraph">We've received your refill order and it's being processed now.</p>
+
+        <div class="status-box">
+          <p class="status-label">Refill Status</p>
+          <p class="status-value">Processing</p>
+        </div>
+
+        <p class="paragraph">We'll let you know as soon as it ships. In the meantime, you can check your order anytime through your patient portal.</p>
+
+        <div class="cta-wrapper">
+          <a href="${PORTAL_URL}" class="cta-button">View My Patient Portal</a>
+        </div>
+
+        <p class="paragraph">Questions? Just reply to this email and our team will help.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">Warmly,<br>The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "We've received your Genesis Health refill order", html };
+}
+
 export function renderPrescriptionWrittenEmail(firstName: string, unsubscribeUrl: string): RenderedEmail {
   const name = firstName.trim() || "there";
   const html = `<!DOCTYPE html>

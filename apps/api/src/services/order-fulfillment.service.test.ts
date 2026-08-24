@@ -9,9 +9,8 @@ vi.mock("../lib/sms-provider.js", async () => {
   return { ...actual, getSmsProvider: () => ({ sendMessage: sendMessageMock }) };
 });
 
-const { sendOrderReceivedOpener, handlePrescriptionWritten, handleOrderShipped, handlePaymentFailed, sweepReviewRequestTriggers } = await import(
-  "./order-fulfillment.service.js"
-);
+const { sendOrderReceivedOpener, sendRefillOrderReceivedNotice, handlePrescriptionWritten, handleOrderShipped, handlePaymentFailed, sweepReviewRequestTriggers } =
+  await import("./order-fulfillment.service.js");
 const { getOrCreateSupportConversation, listSupportMessages } = await import("./support-conversations.service.js");
 
 async function seedCustomer(opts: { phone?: string | null } = {}): Promise<string> {
@@ -55,6 +54,37 @@ describe("sendOrderReceivedOpener", () => {
     const personId = await seedCustomer();
     await setCustomerSmsDnd(personId, true);
     await sendOrderReceivedOpener(personId);
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendRefillOrderReceivedNotice", () => {
+  it("sends the refill notice (not the first-order welcome copy) and logs it", async () => {
+    sendMessageMock.mockClear();
+    sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_refill" });
+
+    const personId = await seedCustomer();
+    await sendRefillOrderReceivedNotice(personId);
+
+    expect(sendMessageMock).toHaveBeenCalledWith("+15559991111", expect.stringContaining("refill"));
+    const conversation = await getOrCreateSupportConversation(personId);
+    const messages = await listSupportMessages(conversation.id);
+    expect(messages.length).toBe(1);
+    expect(messages[0].providerMessageId).toBe("msg_refill");
+  });
+
+  it("does not call the provider when there's no phone on file", async () => {
+    sendMessageMock.mockClear();
+    const personId = await seedCustomer({ phone: null });
+    await sendRefillOrderReceivedNotice(personId);
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("does not call the provider when the customer is SMS do-not-disturb", async () => {
+    sendMessageMock.mockClear();
+    const personId = await seedCustomer();
+    await setCustomerSmsDnd(personId, true);
+    await sendRefillOrderReceivedNotice(personId);
     expect(sendMessageMock).not.toHaveBeenCalled();
   });
 });

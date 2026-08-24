@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   renderOrderReceivedMessage,
+  renderRefillOrderReceivedMessage,
   renderPrescriptionWrittenMessage,
   renderOrderShippedMessage,
   renderReviewRequestMessage,
@@ -18,6 +19,21 @@ describe("renderOrderReceivedMessage", () => {
   it("interpolates the first name, falling back to 'there' when blank", () => {
     expect(renderOrderReceivedMessage("Jamie")).toContain("Jamie");
     expect(renderOrderReceivedMessage("  ")).toContain("there");
+  });
+});
+
+describe("renderRefillOrderReceivedMessage", () => {
+  it("introduces Lisa, says refill (not the first-order welcome copy), and mentions the portal link", () => {
+    const text = renderRefillOrderReceivedMessage("Jamie");
+    expect(text).toContain("this is Lisa");
+    expect(text).toContain("refill");
+    expect(text).not.toContain("the doctor is reviewing it");
+    expect(text).toContain("https://patient.trygenesis.com/login");
+  });
+
+  it("interpolates the first name, falling back to 'there' when blank", () => {
+    expect(renderRefillOrderReceivedMessage("Jamie")).toContain("Jamie");
+    expect(renderRefillOrderReceivedMessage("  ")).toContain("there");
   });
 });
 
