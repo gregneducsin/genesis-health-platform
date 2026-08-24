@@ -14,7 +14,7 @@ function channelFromQuery(req: { query: { channel?: unknown } }): "sms" | "email
 export function createConversationsRouter(): RouterType {
   const router: RouterType = Router();
 
-  router.get("/", requireRole("admin", "manager"), async (req, res, next) => {
+  router.get("/", requireRole("admin", "employee"), async (req, res, next) => {
     try {
       if (channelFromQuery(req) === "email") {
         const [conversations, stats] = await Promise.all([
@@ -34,7 +34,7 @@ export function createConversationsRouter(): RouterType {
     }
   });
 
-  router.get("/:id", requireRole("admin", "manager"), async (req, res, next) => {
+  router.get("/:id", requireRole("admin", "employee"), async (req, res, next) => {
     try {
       const detail =
         channelFromQuery(req) === "email"
@@ -50,7 +50,7 @@ export function createConversationsRouter(): RouterType {
     }
   });
 
-  router.post("/:id/clear-attention", requireRole("admin", "manager"), requireCsrf, async (req, res, next) => {
+  router.post("/:id/clear-attention", requireRole("admin", "employee"), requireCsrf, async (req, res, next) => {
     try {
       const channel = channelFromQuery(req);
       if (channel === "email") {
@@ -79,7 +79,7 @@ export function createConversationsRouter(): RouterType {
   // configured (see its own docstring) — so this fails soft with
   // reason: "send_failed" today and starts working automatically once a
   // provider is wired in, same as every other SMS send site in this app.
-  router.post("/:id/reply", requireRole("admin", "manager"), requireCsrf, async (req, res, next) => {
+  router.post("/:id/reply", requireRole("admin", "employee"), requireCsrf, async (req, res, next) => {
     try {
       const parsed = sendConversationReplyRequestSchema.safeParse(req.body);
       if (!parsed.success) {

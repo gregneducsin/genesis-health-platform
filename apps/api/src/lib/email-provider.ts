@@ -209,18 +209,26 @@ class GmailApiEmailProvider implements EmailProvider {
  * while sharing one authenticated mailbox by default. See .env.example.
  * Internal identifiers stay "lucy"/"sarah" (matching every other file
  * named after them in this codebase) even though the customer-facing
- * display names are Joy/Lisa.
+ * display names are Joy/Lisa. "system" is the non-patient-facing identity
+ * for staff-facing transactional mail (user invitations, and any future
+ * account-management email).
  */
-export type EmailPersona = "lucy" | "sarah";
+export type EmailPersona = "lucy" | "sarah" | "system";
 
 const PERSONA_DEFAULT_NAME: Record<EmailPersona, string> = {
   lucy: "Joy at Genesis Health",
   sarah: "Lisa at Genesis Health",
+  system: "Genesis Health",
+};
+
+const PERSONA_ENV_KEY: Record<EmailPersona, string> = {
+  lucy: "GOOGLE_WORKSPACE_LUCY_FROM_NAME",
+  sarah: "GOOGLE_WORKSPACE_SARAH_FROM_NAME",
+  system: "GOOGLE_WORKSPACE_SYSTEM_FROM_NAME",
 };
 
 function personaFromName(persona: EmailPersona): string {
-  const personaEnvKey = persona === "lucy" ? "GOOGLE_WORKSPACE_LUCY_FROM_NAME" : "GOOGLE_WORKSPACE_SARAH_FROM_NAME";
-  return process.env[personaEnvKey] ?? PERSONA_DEFAULT_NAME[persona];
+  return process.env[PERSONA_ENV_KEY[persona]] ?? PERSONA_DEFAULT_NAME[persona];
 }
 
 /**

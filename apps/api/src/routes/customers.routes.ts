@@ -84,7 +84,7 @@ export function createCustomersRouter(): RouterType {
   // action, not automatic — the link should go out only once the lead has
   // actually agreed to fill out the form, which today means a staff member
   // clicked this after hearing "yes" (no automated agreement-detection yet).
-  router.post("/:id/intake-link", requireRole("admin", "manager"), requireCsrf, async (req, res, next) => {
+  router.post("/:id/intake-link", requireRole("admin"), requireCsrf, async (req, res, next) => {
     try {
       const customer = await customersService.getCustomer(req.params.id as string);
       if (!customer) {
@@ -115,7 +115,7 @@ export function createCustomersRouter(): RouterType {
   // Staff-initiated cancel for the trigger the GET above surfaced — same
   // role set, since anyone who can see it can call off the message it's
   // about to send.
-  router.post("/:id/upcoming-trigger/cancel", requireRole("admin", "manager"), requireCsrf, async (req, res, next) => {
+  router.post("/:id/upcoming-trigger/cancel", requireRole("admin"), requireCsrf, async (req, res, next) => {
     try {
       const parsed = cancelUpcomingTriggerRequestSchema.safeParse(req.body);
       if (!parsed.success) {

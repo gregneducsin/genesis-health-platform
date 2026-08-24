@@ -207,6 +207,15 @@ describe("Marketing spend weeks", () => {
     ({ agent, csrf } = await loginAgent(app, "payroll-admin3@example.com"));
   });
 
+  it("rejects manager role — marketing spend is admin-only", async () => {
+    await seedUser("payroll-mgr2@example.com", "manager");
+    const manager = await loginAgent(app, "payroll-mgr2@example.com");
+    expect((await manager.agent.get("/api/app/payroll/marketing-spend")).status).toBe(403);
+    expect(
+      (await manager.agent.post("/api/app/payroll/marketing-spend").set("x-csrf-token", manager.csrf).send({ weekStart: "2026-03-06" })).status,
+    ).toBe(403);
+  });
+
   it("creates a Friday-starting week with weekEnd auto-derived to the following Thursday", async () => {
     // 2026-03-06 is a Friday; 2026-03-12 is the following Thursday.
     const res = await agent.post("/api/app/payroll/marketing-spend").set("x-csrf-token", csrf).send({ weekStart: "2026-03-06" });

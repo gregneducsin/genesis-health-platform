@@ -28,6 +28,25 @@ export const acceptInvitationRequestSchema = z.object({
 });
 export type AcceptInvitationRequest = z.infer<typeof acceptInvitationRequestSchema>;
 
+export const inviteUserRequestSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  role: z.enum(["admin", "manager", "employee"]),
+});
+export type InviteUserRequest = z.infer<typeof inviteUserRequestSchema>;
+
+// "invited" and "locked" are system-managed transitions (accept-invitation,
+// failed-login lockout) — an admin can only move a user between "active" and
+// "disabled" directly.
+export const updateUserRequestSchema = z
+  .object({
+    role: z.enum(["admin", "manager", "employee"]).optional(),
+    status: z.enum(["active", "disabled"]).optional(),
+  })
+  .refine((v) => v.role !== undefined || v.status !== undefined, { message: "Provide role and/or status to update." });
+export type UpdateUserRequest = z.infer<typeof updateUserRequestSchema>;
+
 // Safe user shape returned to the client — never includes passwordHash.
 export const authUserSchema = z.object({
   id: z.string().uuid(),

@@ -43,16 +43,16 @@ describe("Conversations", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rejects employee role", async () => {
-    await seedUser("convo-emp1@example.com", "employee");
-    const { agent } = await loginAgent(app, "convo-emp1@example.com");
+  it("rejects manager role — manager's scope is payroll + read-only leads/orders only", async () => {
+    await seedUser("convo-mgr1@example.com", "manager");
+    const { agent } = await loginAgent(app, "convo-mgr1@example.com");
     const res = await agent.get("/api/app/conversations");
     expect(res.status).toBe(403);
   });
 
   it("lists conversation summaries with the customer's name and last message", async () => {
-    await seedUser("convo-manager1@example.com", "manager");
-    const { agent } = await loginAgent(app, "convo-manager1@example.com");
+    await seedUser("convo-employee1@example.com", "employee");
+    const { agent } = await loginAgent(app, "convo-employee1@example.com");
 
     const personId = await seedCustomer();
     const conversation = await getOrCreateConversation(personId);

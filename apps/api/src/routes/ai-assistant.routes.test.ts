@@ -33,11 +33,16 @@ describe("AI assistant", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rejects employee role", async () => {
+  it("rejects employee and manager roles — the AI assistant is admin-only", async () => {
     await seedUser("ai-emp@example.com", "employee");
-    const { agent, csrf } = await loginAgent(app, "ai-emp@example.com");
-    const res = await agent.post("/api/app/ai-assistant/ask").set("x-csrf-token", csrf).send({ question: "How many leads?" });
+    const employee = await loginAgent(app, "ai-emp@example.com");
+    const res = await employee.agent.post("/api/app/ai-assistant/ask").set("x-csrf-token", employee.csrf).send({ question: "How many leads?" });
     expect(res.status).toBe(403);
+
+    await seedUser("ai-mgr@example.com", "manager");
+    const manager = await loginAgent(app, "ai-mgr@example.com");
+    const mgrRes = await manager.agent.post("/api/app/ai-assistant/ask").set("x-csrf-token", manager.csrf).send({ question: "How many leads?" });
+    expect(mgrRes.status).toBe(403);
   });
 
   it("rejects an empty question", async () => {

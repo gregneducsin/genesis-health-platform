@@ -33,11 +33,15 @@ describe("Questionnaires performance", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rejects employee role", async () => {
+  it("rejects employee and manager roles — questionnaires is admin-only", async () => {
     await seedUser("quest-emp@example.com", "employee");
     const { agent } = await loginAgent(app, "quest-emp@example.com");
     const res = await agent.get("/api/app/questionnaires");
     expect(res.status).toBe(403);
+
+    await seedUser("quest-mgr@example.com", "manager");
+    const manager = await loginAgent(app, "quest-mgr@example.com");
+    expect((await manager.agent.get("/api/app/questionnaires")).status).toBe(403);
   });
 
   it("groups by questionnaire ID, counts first-time customers, and never double-counts revenue at the summary level", async () => {

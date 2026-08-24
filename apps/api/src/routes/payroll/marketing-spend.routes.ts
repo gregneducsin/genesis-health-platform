@@ -7,7 +7,7 @@ import { requireCsrf } from "../../middleware/csrf.js";
 export function createMarketingSpendRouter(): RouterType {
   const router: RouterType = Router();
 
-  router.get("/", requireRole("admin", "manager"), async (_req, res, next) => {
+  router.get("/", requireRole("admin"), async (_req, res, next) => {
     try {
       res.json({ weeks: await marketingSpendService.listMarketingCpaWeeks() });
     } catch (err) {

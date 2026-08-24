@@ -16,6 +16,7 @@ import { NeedsAttentionPage } from "./pages/NeedsAttentionPage";
 import { UnmatchedEmailsPage } from "./pages/UnmatchedEmailsPage";
 import { UnmatchedSmsPage } from "./pages/UnmatchedSmsPage";
 import { ReportingPage } from "./pages/ReportingPage";
+import { UsersPage } from "./pages/UsersPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export default function App() {
@@ -25,92 +26,98 @@ export default function App() {
       <Route path="/accept-invitation" component={AcceptInvitationPage} />
 
       <Route path="/">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin"]}>
           <DashboardPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/customers">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "manager"]}>
           <LeadsPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/customers/:id">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "manager"]}>
           <CustomerDetailPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/orders">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "manager"]}>
           <OrdersPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/payroll/employees">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "manager"]}>
           <PayrollEmployeesPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/payroll/weeks">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "manager"]}>
           <PayrollWeeksPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/payroll/weeks/:id">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "manager"]}>
           <PayrollWeekDetailPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/marketing-cpa">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin"]}>
           <MarketingCpaPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/questionnaires">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin"]}>
           <QuestionnairesPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/conversations">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "employee"]}>
           <ConversationsPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/support">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "employee"]}>
           <SupportPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/needs-attention">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "employee"]}>
           <NeedsAttentionPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/unmatched-emails">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "employee"]}>
           <UnmatchedEmailsPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/unmatched-sms">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin", "employee"]}>
           <UnmatchedSmsPage />
         </ProtectedRoute>
       </Route>
 
       <Route path="/reporting">
-        <ProtectedRoute>
+        <ProtectedRoute roles={["admin"]}>
           <ReportingPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/users">
+        <ProtectedRoute roles={["admin"]}>
+          <UsersPage />
         </ProtectedRoute>
       </Route>
 
