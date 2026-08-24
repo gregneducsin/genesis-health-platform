@@ -365,6 +365,167 @@ export function renderOrderShippedEmail(firstName: string, trackingNumber: strin
 }
 
 /**
+ * Fired from handlePaymentFailed when a bask_payment_failed webhook
+ * arrives — correcting course after the order-received email already went
+ * out the moment the order landed, before payment was actually confirmed.
+ * No CTA button/link here (unlike the other status emails) — there's no
+ * confirmed self-service payment-retry page, so this is deliberately
+ * staff-assisted: ask the patient to reply, same as every other contact
+ * point in this file, rather than pointing at a URL that might not exist.
+ */
+export function renderPaymentFailedFirstOrderEmail(firstName: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>We couldn't process the payment for your Genesis Health order</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .status-box { background-color: #12312b; border-radius: 4px; padding: 26px 24px; margin: 0 0 26px 0; text-align: center; }
+  .status-label { font-size: 11px; letter-spacing: 2px; color: #9db4ae; text-transform: uppercase; margin: 0 0 8px 0; }
+  .status-value { font-size: 22px; color: #ffffff; margin: 0; font-weight: 700; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Dear ${name},</p>
+
+        <p class="paragraph">We weren't able to process the payment for your order, so we can't move forward with it yet.</p>
+
+        <div class="status-box">
+          <p class="status-label">Order Status</p>
+          <p class="status-value">Payment Needed</p>
+        </div>
+
+        <p class="paragraph">Just reply to this email and we'll get your payment sorted out.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">We're here to help.<br><!--[if mso]>&nbsp;<![endif]--><br>Warmly,<br>The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "We couldn't process the payment for your Genesis Health order", html };
+}
+
+export function renderPaymentFailedRecurringEmail(firstName: string, unsubscribeUrl: string): RenderedEmail {
+  const name = firstName.trim() || "there";
+  const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>We couldn't process the payment for your Genesis Health refill</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td { font-family: Arial, Helvetica, sans-serif; }
+  body { margin: 0; padding: 0; background-color: #f1f5f4; }
+  .email-wrapper { width: 100%; background-color: #f1f5f4; padding: 40px 0; }
+  .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #dde5e3; }
+  .header { background-color: #12312b; padding: 32px 40px; text-align: center; }
+  .logo-text { font-size: 24px; letter-spacing: 2px; color: #ffffff; margin: 0; font-weight: 700; }
+  .body-content { padding: 44px 40px 20px 40px; }
+  .greeting { font-size: 22px; color: #12312b; margin: 0 0 22px 0; font-weight: 700; }
+  .paragraph { font-size: 15px; line-height: 26px; color: #3f4a47; margin: 0 0 20px 0; }
+  .status-box { background-color: #12312b; border-radius: 4px; padding: 26px 24px; margin: 0 0 26px 0; text-align: center; }
+  .status-label { font-size: 11px; letter-spacing: 2px; color: #9db4ae; text-transform: uppercase; margin: 0 0 8px 0; }
+  .status-value { font-size: 22px; color: #ffffff; margin: 0; font-weight: 700; }
+  .divider { border: none; border-top: 1px solid #dde5e3; margin: 30px 0; }
+  .footer { padding: 28px 40px 40px 40px; text-align: center; }
+  .footer-text { font-size: 12px; line-height: 20px; color: #7c8a86; margin: 4px 0; }
+  a { color: #0d9488; }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td class="header">
+        <p class="logo-text">GENESIS HEALTH</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="body-content">
+        <p class="greeting">Dear ${name},</p>
+
+        <p class="paragraph">We weren't able to process the payment for your refill.</p>
+
+        <div class="status-box">
+          <p class="status-label">Refill Status</p>
+          <p class="status-value">Payment Needed</p>
+        </div>
+
+        <p class="paragraph">Are you still interested in moving forward with it? Just reply to this email and we'll get it sorted out.</p>
+
+        <p class="paragraph" style="margin-bottom:0;">We're here to help.<br><!--[if mso]>&nbsp;<![endif]--><br>Warmly,<br>The Genesis Health Team</p>
+      </td>
+    </tr>
+    <tr>
+      <td><hr class="divider" style="margin-left:40px; margin-right:40px;"></td>
+    </tr>
+    <tr>
+      <td class="footer">
+        <p class="footer-text">${physicalAddress()}</p>
+        <p class="footer-text"><a href="${unsubscribeUrl}">Unsubscribe</a> from future emails.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;
+  return { subject: "We couldn't process the payment for your Genesis Health refill", html };
+}
+
+/**
  * `ctaUrl` must be a freshly-minted per-lead intake link (createIntakeLink
  * with promo "first_month_20"), not the bare Bask questionnaire URL —
  * clicking it is what arms the 2-hour follow-up job (see

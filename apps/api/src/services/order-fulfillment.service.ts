@@ -3,8 +3,21 @@ import { db, customersTable, reviewRequestTriggersTable } from "@luma/db";
 import { getOrCreateSupportConversation, appendSupportMessage, updateSupportConversationState } from "./support-conversations.service.js";
 import { getOrCreateSupportEmailConversation, appendSupportEmailMessage } from "./support-email-conversations.service.js";
 import { getSmsProvider } from "../lib/sms-provider.js";
-import { renderOrderReceivedMessage, renderPrescriptionWrittenMessage, renderOrderShippedMessage, renderReviewRequestMessage } from "../lib/support/templates.js";
-import { renderOrderReceivedEmail, renderPrescriptionWrittenEmail, renderOrderShippedEmail } from "../lib/email/templates.js";
+import {
+  renderOrderReceivedMessage,
+  renderPrescriptionWrittenMessage,
+  renderOrderShippedMessage,
+  renderReviewRequestMessage,
+  renderPaymentFailedFirstOrderMessage,
+  renderPaymentFailedRecurringMessage,
+} from "../lib/support/templates.js";
+import {
+  renderOrderReceivedEmail,
+  renderPrescriptionWrittenEmail,
+  renderOrderShippedEmail,
+  renderPaymentFailedFirstOrderEmail,
+  renderPaymentFailedRecurringEmail,
+} from "../lib/email/templates.js";
 import { sendTriggerEmail } from "../lib/email/send-trigger-email.js";
 import { isCustomerSmsDnd } from "./dnd.service.js";
 import { logger } from "../lib/logger.js";
@@ -156,6 +169,52 @@ export async function handleOrderShipped(personId: string, trackingNumber: strin
   //   .insert(reviewRequestTriggersTable)
   //   .values({ personId, dueAt: new Date(Date.now() + REVIEW_REQUEST_DELAY_MS) })
   //   .onConflictDoNothing({ target: reviewRequestTriggersTable.personId });
+}
+
+/**
+ * Fired synchronously from the payment-failed webhook handler, once the
+ * webhook layer has corrected the purchase's status off "completed". The
+ * order-received opener already went out before payment was confirmed — the
+ * patient gets a second, honest message instead of being left thinking their
+ * order is progressing normally. See renderPaymentFailedFirstOrderEmail's
+ * docstring for why there's no retry-payment link.
+ */
+export async function handlePaymentFailed(personId: string, isFirstOrder: boolean): Promise<void> {
+  const customer = await getCustomerContact(personId);
+  const conversation = await getOrCreateSupportConversation(personId);
+  await updateSupportConversationState(conversation.id, {
+    paymentFailed: true,
+    paymentFailedAt: new Date(),
+    needsAttention: true,
+    needsAttentionReason: "The customer's payment failed and they've been notified — needs a person to help them complete payment.",
+  });
+
+  const dnd = await isCustomerSmsDnd(personId);
+  if (customer?.phone && !dnd) {
+    const text = isFirstOrder ? renderPaymentFailedFirstOrderMessage(customer.firstName) : renderPaymentFailedRecurringMessage(customer.firstName);
+    try {
+      const result = await getSmsProvider().sendMessage(customer.phone, text);
+      await appendSupportMessage(conversation.id, "outbound", text, { providerMessageId: result.providerMessageId });
+    } catch (err) {
+      logger.warn({ personId, reason: err instanceof Error ? err.message : String(err) }, "payment-failed notice send failed");
+      await appendSupportMessage(conversation.id, "outbound", text, {});
+    }
+  } else {
+    logger.warn({ personId, reason: dnd ? "do_not_disturb" : "no_phone_number" }, "payment-failed notice not sent");
+  }
+
+  if (customer) {
+    const emailConversation = await getOrCreateSupportEmailConversation(personId);
+    await sendTriggerEmail({
+      persona: "sarah",
+      personId,
+      conversationId: emailConversation.id,
+      email: customer.email,
+      render: (unsubscribeUrl) => (isFirstOrder ? renderPaymentFailedFirstOrderEmail(customer.firstName, unsubscribeUrl) : renderPaymentFailedRecurringEmail(customer.firstName, unsubscribeUrl)),
+      appendMessage: appendSupportEmailMessage,
+      logLabel: "payment-failed",
+    });
+  }
 }
 
 export interface ReviewRequestSweepResult {

@@ -21,7 +21,7 @@ import { scheduleAbandonedCartOpener } from "./abandoned-cart.service.js";
 import { scheduleAbandonedCartEmailSequence } from "./abandoned-cart-email.service.js";
 import { sendMetaLeadOpener } from "./meta-lead.service.js";
 import { scheduleMetaLeadEmailSequence } from "./meta-lead-email.service.js";
-import { sendOrderReceivedOpener, handlePrescriptionWritten, handleOrderShipped } from "./order-fulfillment.service.js";
+import { sendOrderReceivedOpener, handlePrescriptionWritten, handleOrderShipped, handlePaymentFailed } from "./order-fulfillment.service.js";
 import { setCustomerSmsDnd, setCustomerEmailDnd } from "./dnd.service.js";
 import { logger } from "../lib/logger.js";
 
@@ -444,6 +444,27 @@ export async function handleBaskPaymentFailedWebhook(payload: BaskPaymentFailedW
       testMode: payload.testMode ?? false,
       rawPayload: payload,
     });
+
+    if (customerId) {
+      // ecommerceOrderId is populated by the order webhook as
+      // payload.ecommerceOrderId ?? payload.transactionId — matching this
+      // payment-failed webhook's own transactionId against it is the best
+      // available correlation signal (SPECULATIVE — Bask hasn't confirmed
+      // these two fields are guaranteed to line up).
+      const [purchase] = await db
+        .select({ id: purchasesTable.id, status: purchasesTable.status, orderClassification: purchasesTable.orderClassification })
+        .from(purchasesTable)
+        .where(and(eq(purchasesTable.customerId, customerId), eq(purchasesTable.ecommerceOrderId, payload.transactionId)));
+
+      if (purchase && purchase.status === "completed") {
+        await db.update(purchasesTable).set({ status: "payment_failed" }).where(eq(purchasesTable.id, purchase.id));
+        await handlePaymentFailed(customerId, purchase.orderClassification === "first_order");
+      } else if (!purchase) {
+        logger.warn({ customerId, transactionId: payload.transactionId }, "payment-failed webhook: no matching purchase found to correct — recorded for reporting only");
+      }
+    } else {
+      logger.warn({ transactionId: payload.transactionId }, "payment-failed webhook: could not resolve a customer — recorded for reporting only");
+    }
 
     await markWebhookEventProcessed(recorded.id, customerId);
   } catch (err) {
