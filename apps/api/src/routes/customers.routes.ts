@@ -5,11 +5,12 @@ import {
   listCustomersQuerySchema,
   customersSummaryQuerySchema,
   createPurchaseRequestSchema,
+  cancelUpcomingTriggerRequestSchema,
 } from "@luma/shared";
 import * as customersService from "../services/customers.service.js";
 import * as purchasesService from "../services/purchases.service.js";
 import { createIntakeLink } from "../services/intake-links.service.js";
-import { getUpcomingTrigger } from "../services/scheduled-triggers.service.js";
+import { getUpcomingTrigger, cancelUpcomingTrigger } from "../services/scheduled-triggers.service.js";
 import { requireRole } from "../middleware/requireAuth.js";
 import { requireCsrf } from "../middleware/csrf.js";
 
@@ -106,6 +107,23 @@ export function createCustomersRouter(): RouterType {
     try {
       const trigger = await getUpcomingTrigger(req.params.id as string);
       res.json({ trigger: trigger ? { ...trigger, dueAt: trigger.dueAt.toISOString() } : null });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Staff-initiated cancel for the trigger the GET above surfaced — same
+  // role set, since anyone who can see it can call off the message it's
+  // about to send.
+  router.post("/:id/upcoming-trigger/cancel", requireRole("admin", "manager"), requireCsrf, async (req, res, next) => {
+    try {
+      const parsed = cancelUpcomingTriggerRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid request.", details: parsed.error.issues });
+        return;
+      }
+      const cancelled = await cancelUpcomingTrigger(req.params.id as string, parsed.data.kind);
+      res.json({ cancelled });
     } catch (err) {
       next(err);
     }

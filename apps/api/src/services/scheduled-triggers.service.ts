@@ -132,6 +132,36 @@ async function nextReviewRequestSms(personId: string): Promise<UpcomingTrigger |
   return { kind: "review_request_sms", label: "Review-request text", dueAt: row.dueAt, status: row.status as "pending" | "processing" };
 }
 
+const TRIGGER_TABLE_BY_KIND = {
+  follow_up: followUpJobsTable,
+  abandoned_cart_sms: abandonedCartTriggersTable,
+  lead_checkin_sms: leadCheckinTriggersTable,
+  objection_reengagement_sms: objectionReengagementTriggersTable,
+  abandoned_cart_email: abandonedCartEmailTriggersTable,
+  meta_lead_email: metaLeadEmailTriggersTable,
+  review_request_sms: reviewRequestTriggersTable,
+} as const;
+
+/**
+ * Staff-initiated cancel for whichever trigger getUpcomingTrigger surfaced —
+ * the client passes back the same `kind` it was given, so this only ever
+ * touches the one table that kind maps to. At most one pending/processing
+ * row per person per table (see getUpcomingTrigger's docstring), so scoping
+ * by personId + the same PENDING_STATUSES getUpcomingTrigger reads is
+ * exactly "cancel the row that's actually still upcoming" — a stale kind
+ * (the trigger already sent or was cancelled elsewhere since the banner
+ * loaded) simply matches zero rows and returns false.
+ */
+export async function cancelUpcomingTrigger(personId: string, kind: UpcomingTrigger["kind"]): Promise<boolean> {
+  const table = TRIGGER_TABLE_BY_KIND[kind];
+  const [cancelled] = await db
+    .update(table)
+    .set({ status: "cancelled", cancelledReason: "staff_cancelled" })
+    .where(and(eq(table.personId, personId), inArray(table.status, PENDING_STATUSES)))
+    .returning({ id: table.id });
+  return Boolean(cancelled);
+}
+
 /**
  * The soonest still-pending (or mid-send "processing") automated trigger
  * armed for this person, across every trigger table in the app — or null if
