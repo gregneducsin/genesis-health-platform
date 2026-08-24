@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { db, customersTable } from "@luma/db";
 import {
   getOrCreateSupportConversation,
@@ -10,6 +10,9 @@ import {
   listSupportConversationSummaries,
   getSupportConversationDetail,
 } from "./support-conversations.service.js";
+
+const notifySlackMock = vi.fn();
+vi.mock("../lib/slack.js", () => ({ notifySlack: (...args: unknown[]) => notifySlackMock(...args) }));
 
 async function seedCustomer(): Promise<string> {
   const [row] = await db
@@ -130,5 +133,39 @@ describe("listSupportConversationSummaries / getSupportConversationDetail", () =
   it("getSupportConversationDetail returns null for an unknown conversation id", async () => {
     const detail = await getSupportConversationDetail("00000000-0000-0000-0000-000000000000");
     expect(detail).toBeNull();
+  });
+});
+
+describe("updateSupportConversationState — Slack alert on needsAttention", () => {
+  it("alerts Slack the first time a conversation is flagged, naming the customer and reason", async () => {
+    notifySlackMock.mockClear();
+    const personId = await seedCustomer();
+    const conversation = await getOrCreateSupportConversation(personId);
+
+    await updateSupportConversationState(conversation.id, { needsAttention: true, needsAttentionReason: "payment failed" });
+
+    expect(notifySlackMock).toHaveBeenCalledTimes(1);
+    expect(notifySlackMock.mock.calls[0][0]).toContain("payment failed");
+  });
+
+  it("does not re-alert on a subsequent patch while already flagged", async () => {
+    notifySlackMock.mockClear();
+    const personId = await seedCustomer();
+    const conversation = await getOrCreateSupportConversation(personId);
+
+    await updateSupportConversationState(conversation.id, { needsAttention: true, needsAttentionReason: "first reason" });
+    await updateSupportConversationState(conversation.id, { needsAttention: true, needsAttentionReason: "still flagged" });
+
+    expect(notifySlackMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not alert when the patch doesn't touch needsAttention", async () => {
+    notifySlackMock.mockClear();
+    const personId = await seedCustomer();
+    const conversation = await getOrCreateSupportConversation(personId);
+
+    await updateSupportConversationState(conversation.id, { lastQuestion: "anything else?" });
+
+    expect(notifySlackMock).not.toHaveBeenCalled();
   });
 });

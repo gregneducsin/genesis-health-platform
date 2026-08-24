@@ -23,6 +23,7 @@ import { sendMetaLeadOpener } from "./meta-lead.service.js";
 import { scheduleMetaLeadEmailSequence } from "./meta-lead-email.service.js";
 import { sendOrderReceivedOpener, handlePrescriptionWritten, handleOrderShipped, handlePaymentFailed } from "./order-fulfillment.service.js";
 import { setCustomerSmsDnd, setCustomerEmailDnd } from "./dnd.service.js";
+import { notifySlack } from "../lib/slack.js";
 import { logger } from "../lib/logger.js";
 
 /**
@@ -82,10 +83,14 @@ export async function markWebhookEventProcessed(id: string, personId?: string): 
 }
 
 export async function markWebhookEventFailed(id: string, errorMessage: string): Promise<void> {
-  await db
+  const [row] = await db
     .update(webhookEventsTable)
     .set({ status: "failed", processedAt: new Date(), errorMessage })
-    .where(eq(webhookEventsTable.id, id));
+    .where(eq(webhookEventsTable.id, id))
+    .returning({ source: webhookEventsTable.source });
+  if (row) {
+    void notifySlack(`Webhook processing failed (${row.source}): ${errorMessage}`);
+  }
 }
 
 /**

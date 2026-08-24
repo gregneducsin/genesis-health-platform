@@ -1,7 +1,8 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db, emailConversationsTable, emailConversationMessagesTable, customersTable, type EmailConversation, type EmailConversationMessage } from "@luma/db";
 import type { BotPreviewRequestBody } from "../lib/messaging/types.js";
 import type { ObjectionKey } from "../lib/messaging/objection-handling.js";
+import { notifySlack } from "../lib/slack.js";
 
 const MAX_HISTORY_MESSAGES = 20;
 
@@ -48,7 +49,30 @@ export async function getOrCreateEmailConversation(
   return row;
 }
 
+/** See support-conversations.service.ts's updateSupportConversationState for why the "already flagged" check only happens on this one patch shape. */
 export async function updateEmailConversationState(conversationId: string, patch: EmailConversationStatePatch): Promise<void> {
+  if (patch.needsAttention === true) {
+    // Atomic UPDATE ... WHERE needsAttention = false ... RETURNING — see
+    // support-conversations.service.ts's updateSupportConversationState for
+    // why this can't be a separate read-then-write.
+    const [flipped] = await db
+      .update(emailConversationsTable)
+      .set(patch)
+      .where(and(eq(emailConversationsTable.id, conversationId), eq(emailConversationsTable.needsAttention, false)))
+      .returning({ personId: emailConversationsTable.personId });
+    if (flipped) {
+      const [customer] = await db
+        .select({ firstName: customersTable.firstName, lastName: customersTable.lastName })
+        .from(customersTable)
+        .where(eq(customersTable.id, flipped.personId));
+      if (customer) {
+        void notifySlack(`Needs attention (email) — ${customer.firstName} ${customer.lastName}: ${patch.needsAttentionReason ?? "no reason given"}`);
+      }
+      return;
+    }
+    await db.update(emailConversationsTable).set(patch).where(eq(emailConversationsTable.id, conversationId));
+    return;
+  }
   await db.update(emailConversationsTable).set(patch).where(eq(emailConversationsTable.id, conversationId));
 }
 
