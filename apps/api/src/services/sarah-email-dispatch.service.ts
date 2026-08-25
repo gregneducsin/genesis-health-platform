@@ -152,7 +152,7 @@ export type EmailStaffReplyResult = { readonly sent: true } | { readonly sent: f
  * support-conversations.service.ts's sendStaffReply (SMS), same reasoning
  * as lucy-email-dispatch.service.ts's sendEmailStaffReply.
  */
-export async function sendEmailStaffReply(conversationId: string, body: string): Promise<EmailStaffReplyResult> {
+export async function sendEmailStaffReply(conversationId: string, body: string, staffEmail: string): Promise<EmailStaffReplyResult> {
   const detail = await getSupportEmailConversationDetail(conversationId);
   if (!detail) return { sent: false, reason: "not_found" };
 
@@ -179,7 +179,12 @@ export async function sendEmailStaffReply(conversationId: string, body: string):
     logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "staff email reply send failed");
   }
 
-  await appendSupportEmailMessage(conversationId, "outbound", subject, signedBody, { messageId, inReplyTo: lastMessage?.messageId ?? null });
+  await appendSupportEmailMessage(conversationId, "outbound", subject, signedBody, {
+    messageId,
+    inReplyTo: lastMessage?.messageId ?? null,
+    sentBy: "staff",
+    sentByStaffEmail: staffEmail,
+  });
   if (sendFailed) return { sent: false, reason: "send_failed" };
 
   await updateSupportEmailConversationState(conversationId, { needsAttention: false, needsAttentionReason: null });

@@ -210,7 +210,7 @@ export type EmailStaffReplyResult = { readonly sent: true } | { readonly sent: f
  * greeting/sign-off wrap sendAndLog gives an AI-drafted reply, so a staff
  * reply reads identically to a bot one in the customer's inbox.
  */
-export async function sendEmailStaffReply(conversationId: string, body: string): Promise<EmailStaffReplyResult> {
+export async function sendEmailStaffReply(conversationId: string, body: string, staffEmail: string): Promise<EmailStaffReplyResult> {
   const detail = await getEmailConversationDetail(conversationId);
   if (!detail) return { sent: false, reason: "not_found" };
 
@@ -237,7 +237,12 @@ export async function sendEmailStaffReply(conversationId: string, body: string):
     logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "staff email reply send failed");
   }
 
-  await appendEmailMessage(conversationId, "outbound", subject, signedBody, { messageId, inReplyTo: lastMessage?.messageId ?? null });
+  await appendEmailMessage(conversationId, "outbound", subject, signedBody, {
+    messageId,
+    inReplyTo: lastMessage?.messageId ?? null,
+    sentBy: "staff",
+    sentByStaffEmail: staffEmail,
+  });
   if (sendFailed) return { sent: false, reason: "send_failed" };
 
   await updateEmailConversationState(conversationId, { needsAttention: false, needsAttentionReason: null });

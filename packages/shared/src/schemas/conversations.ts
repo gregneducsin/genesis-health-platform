@@ -26,6 +26,10 @@ export const conversationMessageSchema = z.object({
   direction: z.enum(["inbound", "outbound"]),
   body: z.string(),
   sentiment: z.enum(["positive", "neutral", "negative"]).nullable(),
+  /** Who wrote an outbound message — "ai" (Joy, or an automated trigger) vs "staff" (typed into the reply box). Null on inbound messages. */
+  sentBy: z.enum(["ai", "staff"]).nullable(),
+  /** Which staff member sent it, when sentBy is "staff". Null otherwise. */
+  sentByStaffEmail: z.string().nullable(),
   createdAt: z.string(),
   /** Only present for email-channel messages — absent (not merely null) on every SMS message, since the SMS table has no subject column at all. */
   subject: z.string().optional(),
