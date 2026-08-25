@@ -4,6 +4,7 @@ import { useCustomer, useCreatePurchase, useUpdatePurchase, useCreateIntakeLink 
 import { Badge, Button, Card, ErrorText, Field, Input } from "../components/ui";
 import { ApiError, useCurrentUser } from "../hooks/useAuth";
 import { formatDate, formatDateTime } from "../lib/formatTime";
+import { CustomerNotesCard } from "../components/CustomerNotesCard";
 
 const STATUS_COLORS: Record<string, "gray" | "green" | "yellow" | "red"> = {
   pending: "yellow",
@@ -75,6 +76,8 @@ export function CustomerDetailPage() {
           </div>
         </dl>
       </Card>
+
+      <CustomerNotesCard customerId={customer.id} />
 
       {questionnaireEvents.length > 0 && (
         <Card>

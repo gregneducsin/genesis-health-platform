@@ -6,6 +6,7 @@ import {
   customersSummaryQuerySchema,
   createPurchaseRequestSchema,
   cancelUpcomingTriggerRequestSchema,
+  createCustomerNoteRequestSchema,
 } from "@luma/shared";
 import * as customersService from "../services/customers.service.js";
 import * as purchasesService from "../services/purchases.service.js";
@@ -75,6 +76,39 @@ export function createCustomersRouter(): RouterType {
       const purchases = await purchasesService.listPurchasesForCustomer(customer.id);
       const questionnaireEvents = await customersService.listQuestionnaireEventsForCustomer(customer.id);
       res.json({ customer, purchases, questionnaireEvents });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Internal staff notes — never shown to the customer. employee is
+  // included because CS reps add notes while taking an action on a
+  // call/text (that's the whole point of the feature); manager stays
+  // read-only, same as the rest of the Leads/Orders surface, and never
+  // gets write access since it doesn't take customer-facing actions.
+  router.get("/:id/notes", requireRole("admin", "manager", "employee"), async (req, res, next) => {
+    try {
+      const notes = await customersService.listCustomerNotes(req.params.id as string);
+      res.json({ notes });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post("/:id/notes", requireRole("admin", "employee"), requireCsrf, async (req, res, next) => {
+    try {
+      const parsed = createCustomerNoteRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid request.", details: parsed.error.issues });
+        return;
+      }
+      const customer = await customersService.getCustomer(req.params.id as string);
+      if (!customer) {
+        res.status(404).json({ error: "Customer not found." });
+        return;
+      }
+      const note = await customersService.createCustomerNote(customer.id, parsed.data.body, req.user!.email);
+      res.status(201).json({ note });
     } catch (err) {
       next(err);
     }
