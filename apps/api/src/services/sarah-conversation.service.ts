@@ -18,9 +18,9 @@ import { logger } from "../lib/logger.js";
  * OPT_OUT/EMERGENCY_CONTENT are.
  */
 const PRESCRIPTION_QUESTION_REPLIES = [
-  `For anything about your specific prescription or dose, your patient portal is the best place to check — you can view your prescription details or message the doctor directly there: ${APPROVED_PORTAL_URL}`,
-  `Great question — for prescription or dose specifics, log into your patient portal to see your details or message the doctor directly: ${APPROVED_PORTAL_URL}`,
-  `That's something your patient portal can help with — log in to view your prescription or message the doctor directly: ${APPROVED_PORTAL_URL}`,
+  `For anything about your specific prescription or dose, your patient portal is the best place to check. You can view your prescription details or message the doctor directly there: ${APPROVED_PORTAL_URL}`,
+  `Great question, for prescription or dose specifics, log into your patient portal to see your details or message the doctor directly: ${APPROVED_PORTAL_URL}`,
+  `That's something your patient portal can help with. Log in to view your prescription or message the doctor directly: ${APPROVED_PORTAL_URL}`,
 ] as const;
 
 /**
@@ -33,9 +33,9 @@ const PRESCRIPTION_QUESTION_REPLIES = [
  * staff queue.
  */
 const COLD_CHAIN_CONCERN_REPLIES = [
-  `That's not something to wait on — please message your doctor or our support team directly through your patient portal so they can look into it right away: ${APPROVED_PORTAL_URL}`,
-  `Let's get that looked at right away — please message your doctor or support directly through the patient portal: ${APPROVED_PORTAL_URL}`,
-  `That's worth flagging directly — please message your doctor or support through the patient portal so they can address it right away: ${APPROVED_PORTAL_URL}`,
+  `That's not something to wait on. Please message your doctor or our support team directly through your patient portal so they can look into it right away: ${APPROVED_PORTAL_URL}`,
+  `Let's get that looked at right away. Please message your doctor or support directly through the patient portal: ${APPROVED_PORTAL_URL}`,
+  `That's worth flagging directly. Please message your doctor or support through the patient portal so they can address it right away: ${APPROVED_PORTAL_URL}`,
 ] as const;
 
 function pickVariant(variants: readonly string[]): string {
