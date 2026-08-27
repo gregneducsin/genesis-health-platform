@@ -33,6 +33,7 @@ import { createNeedsAttentionRouter } from "./routes/needs-attention.routes.js";
 import { createUnmatchedEmailsRouter } from "./routes/unmatched-emails.routes.js";
 import { createUnmatchedSmsRouter } from "./routes/unmatched-sms.routes.js";
 import { createReportingRouter } from "./routes/reporting.routes.js";
+import { createFailedPaymentsRouter } from "./routes/failed-payments.routes.js";
 import { createUsersRouter } from "./routes/users.routes.js";
 import { createEmailUnsubscribeRouter } from "./routes/email-unsubscribe.routes.js";
 
@@ -107,6 +108,7 @@ export function createApp(): Express {
   app.use("/api/app/unmatched-emails", createUnmatchedEmailsRouter());
   app.use("/api/app/unmatched-sms", createUnmatchedSmsRouter());
   app.use("/api/app/reporting", createReportingRouter());
+  app.use("/api/app/failed-payments", createFailedPaymentsRouter());
   app.use("/api/app/users", createUsersRouter());
   app.use("/api/app/gmail", createGmailRouter());
 
