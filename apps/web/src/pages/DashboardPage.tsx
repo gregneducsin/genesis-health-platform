@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useEmployees, usePayrollWeeks } from "../hooks/usePayroll";
 import { useFunnelSummary } from "../hooks/useReporting";
+import { useCurrentUser } from "../hooks/useAuth";
 import { Card } from "../components/ui";
 import type { DateRangeQuery } from "@luma/shared";
 
@@ -91,9 +92,13 @@ export function DashboardPage() {
   const [customTo, setCustomTo] = useState("");
   const range = preset === "custom" ? (customFrom && customTo ? { from: customFrom, to: customTo } : undefined) : presetToRange(preset);
 
-  const { data: funnelData } = useFunnelSummary(range);
-  const { data: employeesData } = useEmployees();
-  const { data: weeksData } = usePayrollWeeks();
+  const { data: currentUser } = useCurrentUser();
+  // Matches /api/app/reporting/funnel's own role gate, and /payroll/*'s route
+  // guard in App.tsx — manager has both, employee has neither.
+  const canSeeFunnelStats = currentUser?.user?.role === "admin" || currentUser?.user?.role === "manager";
+  const { data: funnelData } = useFunnelSummary(range, canSeeFunnelStats);
+  const { data: employeesData } = useEmployees(canSeeFunnelStats);
+  const { data: weeksData } = usePayrollWeeks(canSeeFunnelStats);
 
   const activeEmployees = employeesData?.employees.filter((e) => e.status === "active").length ?? 0;
   const draftWeeks = weeksData?.weeks.filter((w) => w.status === "draft").length ?? 0;
@@ -114,10 +119,10 @@ export function DashboardPage() {
         />
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Leads" value={funnelData?.totalLeads ?? "…"} />
-        <StatCard label="Revenue" value={`$${(funnelData?.revenue ?? 0).toFixed(2)}`} />
-        <StatCard label="Active employees" value={activeEmployees} />
-        <StatCard label="Draft payroll weeks" value={draftWeeks} />
+        <StatCard label="Leads" value={canSeeFunnelStats ? (funnelData?.totalLeads ?? "…") : "—"} />
+        <StatCard label="Revenue" value={canSeeFunnelStats ? `$${(funnelData?.revenue ?? 0).toFixed(2)}` : "—"} />
+        <StatCard label="Active employees" value={canSeeFunnelStats ? activeEmployees : "—"} />
+        <StatCard label="Draft payroll weeks" value={canSeeFunnelStats ? draftWeeks : "—"} />
       </div>
     </div>
   );

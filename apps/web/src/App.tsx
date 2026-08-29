@@ -26,7 +26,7 @@ export default function App() {
       <Route path="/accept-invitation" component={AcceptInvitationPage} />
 
       <Route path="/">
-        <ProtectedRoute roles={["admin"]}>
+        <ProtectedRoute roles={["admin", "manager", "employee"]}>
           <DashboardPage />
         </ProtectedRoute>
       </Route>
