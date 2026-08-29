@@ -38,7 +38,7 @@ export default function App() {
       </Route>
 
       <Route path="/customers/:id">
-        <ProtectedRoute roles={["admin", "manager"]}>
+        <ProtectedRoute roles={["admin", "manager", "employee"]}>
           <CustomerDetailPage />
         </ProtectedRoute>
       </Route>

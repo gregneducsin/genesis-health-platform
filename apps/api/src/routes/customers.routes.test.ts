@@ -33,11 +33,22 @@ describe("Customers CRUD", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rejects employee role (requires admin/manager)", async () => {
+  it("rejects employee role from the Leads list, but allows reading a single customer — this powers the identity-confirmation link on Unmatched Contacts", async () => {
+    const { db, customersTable } = await import("@luma/db");
+    const [customer] = await db
+      .insert(customersTable)
+      .values({ firstName: "Emp", lastName: "Target", email: "emp-target@example.com", leadReceivedDate: "2026-01-01" })
+      .returning();
+
     await seedUser("employee1@example.com", "employee");
     const { agent } = await loginAgent(app, "employee1@example.com");
-    const res = await agent.get("/api/app/customers");
-    expect(res.status).toBe(403);
+
+    const listRes = await agent.get("/api/app/customers");
+    expect(listRes.status).toBe(403);
+
+    const detailRes = await agent.get(`/api/app/customers/${customer!.id}`);
+    expect(detailRes.status).toBe(200);
+    expect(detailRes.body.customer.email).toBe("emp-target@example.com");
   });
 
   it("allows manager to read but not create", async () => {
