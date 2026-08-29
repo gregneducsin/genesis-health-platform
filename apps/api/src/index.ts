@@ -10,6 +10,7 @@ import { sweepObjectionReengagementTriggers } from "./services/objection-reengag
 import { sweepAbandonedCartEmailTriggers } from "./services/abandoned-cart-email.service.js";
 import { sweepMetaLeadEmailTriggers } from "./services/meta-lead-email.service.js";
 import { sweepInboundEmail } from "./services/email-inbound.service.js";
+import { notifySlack } from "./lib/slack.js";
 
 // Migrations are applied as a discrete step before this process starts (see
 // packages/db/src/migrate.ts's docstring, the Dockerfile entrypoint, and the
@@ -30,6 +31,7 @@ const FOLLOW_UP_SWEEP_INTERVAL_MS = 10 * 60 * 1000;
 setInterval(() => {
   sweepFollowUpJobs().catch((err) => {
     logger.error({ err }, "follow-up job sweep failed");
+    void notifySlack(`Follow-up job sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, FOLLOW_UP_SWEEP_INTERVAL_MS);
 
@@ -40,6 +42,7 @@ const ABANDONED_CART_SWEEP_INTERVAL_MS = 2 * 60 * 1000;
 setInterval(() => {
   sweepAbandonedCartTriggers().catch((err) => {
     logger.error({ err }, "abandoned-cart opener sweep failed");
+    void notifySlack(`Abandoned-cart opener sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, ABANDONED_CART_SWEEP_INTERVAL_MS);
 
@@ -55,6 +58,7 @@ const LEAD_CHECKIN_SWEEP_INTERVAL_MS = 30 * 60 * 1000;
 setInterval(() => {
   sweepLeadCheckinTriggers().catch((err) => {
     logger.error({ err }, "lead check-in sweep failed");
+    void notifySlack(`Lead check-in sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, LEAD_CHECKIN_SWEEP_INTERVAL_MS);
 
@@ -64,6 +68,7 @@ const OBJECTION_REENGAGEMENT_SWEEP_INTERVAL_MS = 30 * 60 * 1000;
 setInterval(() => {
   sweepObjectionReengagementTriggers().catch((err) => {
     logger.error({ err }, "objection re-engagement sweep failed");
+    void notifySlack(`Objection re-engagement sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, OBJECTION_REENGAGEMENT_SWEEP_INTERVAL_MS);
 
@@ -75,6 +80,7 @@ const ABANDONED_CART_EMAIL_SWEEP_INTERVAL_MS = 2 * 60 * 1000;
 setInterval(() => {
   sweepAbandonedCartEmailTriggers().catch((err) => {
     logger.error({ err }, "abandoned-cart email sweep failed");
+    void notifySlack(`Abandoned-cart email sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, ABANDONED_CART_EMAIL_SWEEP_INTERVAL_MS);
 
@@ -84,6 +90,7 @@ const META_LEAD_EMAIL_SWEEP_INTERVAL_MS = 2 * 60 * 1000;
 setInterval(() => {
   sweepMetaLeadEmailTriggers().catch((err) => {
     logger.error({ err }, "meta-lead email sweep failed");
+    void notifySlack(`Meta-lead email sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, META_LEAD_EMAIL_SWEEP_INTERVAL_MS);
 
@@ -99,6 +106,7 @@ if (process.env.GOOGLE_WORKSPACE_SMTP_USER) {
   setInterval(() => {
     sweepInboundEmail().catch((err) => {
       logger.error({ err }, "inbound email sweep failed");
+      void notifySlack(`Inbound email sweep failed: ${err instanceof Error ? err.message : String(err)}`);
     });
   }, EMAIL_INBOUND_SWEEP_INTERVAL_MS);
 } else {
