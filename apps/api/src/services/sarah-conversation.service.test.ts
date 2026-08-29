@@ -85,6 +85,24 @@ describe("runSarahTurn", () => {
     }
   });
 
+  it("routes a request to pause/hold a prescription to staff_review via pre-check, no provider call, points to the portal, and never confirms the pause happened", async () => {
+    callSarahInteractiveMock.mockClear();
+    const result = await runSarahTurn(baseBody({ messages: [{ direction: "inbound", body: "can you pause my prescription for a couple months" }] }));
+
+    expect(callSarahInteractiveMock).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.action).toBe("staff_review");
+      expect(result.requiresStaff).toBe(true);
+      expect(result.reply).toMatch(/portal/i);
+      expect(result.reply).toContain("https://patient.trygenesis.com/login");
+      // Never a confirmation that the pause happened — Sarah has no way to
+      // action it, only to point at the portal and flag a person.
+      expect(result.reply).not.toMatch(/paused|has been paused|you're paused|is paused/i);
+      expect(result.preCheckCode).toBe("PAUSE_PRESCRIPTION_REQUEST");
+    }
+  });
+
   it("fails closed with the guardrail's rejection code when post-check rejects the model's reply", async () => {
     callSarahInteractiveMock.mockClear();
     callSarahInteractiveMock.mockResolvedValueOnce(modelResult({ reply: "Your semaglutide dose is being increased." }));
