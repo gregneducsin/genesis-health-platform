@@ -3,6 +3,7 @@ import request from "supertest";
 import { db, customersTable } from "@luma/db";
 import { createApp } from "../app.js";
 import { getOrCreateConversation, appendMessage } from "../services/conversations.service.js";
+import { getOrCreateEmailConversation } from "../services/email-conversations.service.js";
 
 const PASSWORD = "CorrectHorseBattery1";
 
@@ -73,6 +74,25 @@ describe("Conversations", () => {
     expect(typeof res.body.stats.responseRate).toBe("number");
     // This conversation (outbound then inbound) is included in the global count.
     expect(res.body.stats.totalResponded).toBeGreaterThanOrEqual(1);
+
+    // A bare "ORDER BY ... DESC" sorts NULLs first in Postgres, which would
+    // put a zero-message email conversation ahead of an active one — the
+    // opposite of "most recently active first". Reuses this test's
+    // login/customer setup rather than a fresh one (see rate-limiter note).
+    const activePersonId = await seedCustomer();
+    const activeEmailConversation = await getOrCreateEmailConversation(activePersonId);
+    const { appendEmailMessage } = await import("../services/email-conversations.service.js");
+    await appendEmailMessage(activeEmailConversation.id, "outbound", "Hello", "Hello");
+
+    const emptyPersonId = await seedCustomer();
+    const emptyEmailConversation = await getOrCreateEmailConversation(emptyPersonId);
+
+    const emailListRes = await agent.get("/api/app/conversations").query({ channel: "email" });
+    const activeIndex = emailListRes.body.conversations.findIndex((c: { id: string }) => c.id === activeEmailConversation.id);
+    const emptyIndex = emailListRes.body.conversations.findIndex((c: { id: string }) => c.id === emptyEmailConversation.id);
+    expect(activeIndex).toBeGreaterThanOrEqual(0);
+    expect(emptyIndex).toBeGreaterThanOrEqual(0);
+    expect(activeIndex).toBeLessThan(emptyIndex);
   });
 
   it("returns conversation detail with customer contact and full message history", async () => {
