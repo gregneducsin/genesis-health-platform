@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db, conversationsTable, conversationMessagesTable, customersTable, type Conversation, type ConversationMessage } from "@luma/db";
+import { db, conversationsTable, conversationMessagesTable, customersTable, purchasesTable, type Conversation, type ConversationMessage } from "@luma/db";
 import type { BotPreviewRequestBody } from "../lib/messaging/types.js";
 import type { ObjectionKey } from "../lib/messaging/objection-handling.js";
 import { getSmsProvider } from "../lib/sms-provider.js";
@@ -223,7 +223,11 @@ export async function getConversationResponseStats(): Promise<ConversationRespon
 
 export async function getConversationDetail(
   conversationId: string,
-): Promise<{ conversation: Conversation; customer: { firstName: string; lastName: string; phone: string | null }; messages: ConversationMessage[] } | null> {
+): Promise<{
+  conversation: Conversation;
+  customer: { firstName: string; lastName: string; phone: string | null; hasQualifyingPurchase: boolean };
+  messages: ConversationMessage[];
+} | null> {
   const [row] = await db
     .select({
       conversation: conversationsTable,
@@ -236,7 +240,22 @@ export async function getConversationDetail(
     .where(eq(conversationsTable.id, conversationId));
   if (!row) return null;
   const messages = await listMessages(conversationId, 200);
-  return { conversation: row.conversation, customer: { firstName: row.firstName, lastName: row.lastName, phone: row.phone }, messages };
+  // Same "completed purchase" check the lead-checkin/abandoned-cart sweeps
+  // use to cancel their own triggers — surfaced here so staff looking at
+  // the conversation see it too, instead of only inferring it from whether
+  // a scheduled trigger banner happens to still be showing (it lags behind
+  // an actual purchase until the next sweep cancels it, see those services'
+  // eligibility checks).
+  const [purchased] = await db
+    .select({ id: purchasesTable.id })
+    .from(purchasesTable)
+    .where(and(eq(purchasesTable.customerId, row.conversation.personId), eq(purchasesTable.status, "completed")))
+    .limit(1);
+  return {
+    conversation: row.conversation,
+    customer: { firstName: row.firstName, lastName: row.lastName, phone: row.phone, hasQualifyingPurchase: Boolean(purchased) },
+    messages,
+  };
 }
 
 export type StaffReplyResult = { readonly sent: true } | { readonly sent: false; readonly reason: "not_found" | "no_phone" | "send_failed" };
