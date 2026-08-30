@@ -16,7 +16,7 @@ export interface EmailSendResult {
 }
 
 export interface EmailSendOptions {
-  /** Display name for the From header, e.g. "Joy at Genesis Health". Falls back to the provider's configured default identity when omitted. */
+  /** Display name for the From header, e.g. "Chris at Genesis Health". Falls back to the provider's configured default identity when omitted. */
   readonly fromName?: string;
   readonly replyTo?: string;
   /** RFC 5322 Message-ID of the message being replied to — sets the In-Reply-To header so mail clients thread the conversation. */
@@ -215,27 +215,27 @@ class GmailApiEmailProvider implements EmailProvider {
 }
 
 /**
- * Which persona is sending — lets Joy and Lisa show different display
+ * Which persona is sending — lets Chris and Mia show different display
  * names (and, if the workspace has separate "send mail as" aliases
  * configured, different addresses via the per-persona FROM_EMAIL vars)
  * while sharing one authenticated mailbox by default. See .env.example.
- * Internal identifiers stay "lucy"/"sarah" (matching every other file
+ * Internal identifiers stay "chris"/"mia" (matching every other file
  * named after them in this codebase) even though the customer-facing
- * display names are Joy/Lisa. "system" is the non-patient-facing identity
+ * display names are Chris/Mia. "system" is the non-patient-facing identity
  * for staff-facing transactional mail (user invitations, and any future
  * account-management email).
  */
-export type EmailPersona = "lucy" | "sarah" | "system";
+export type EmailPersona = "chris" | "mia" | "system";
 
 const PERSONA_DEFAULT_NAME: Record<EmailPersona, string> = {
-  lucy: "Joy at Genesis Health",
-  sarah: "Lisa at Genesis Health",
+  chris: "Chris at Genesis Health",
+  mia: "Mia at Genesis Health",
   system: "Genesis Health",
 };
 
 const PERSONA_ENV_KEY: Record<EmailPersona, string> = {
-  lucy: "GOOGLE_WORKSPACE_LUCY_FROM_NAME",
-  sarah: "GOOGLE_WORKSPACE_SARAH_FROM_NAME",
+  chris: "GOOGLE_WORKSPACE_CHRIS_FROM_NAME",
+  mia: "GOOGLE_WORKSPACE_MIA_FROM_NAME",
   system: "GOOGLE_WORKSPACE_SYSTEM_FROM_NAME",
 };
 

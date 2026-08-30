@@ -57,7 +57,7 @@ describe("Conversations", () => {
 
     const personId = await seedCustomer();
     const conversation = await getOrCreateConversation(personId);
-    await appendMessage(conversation.id, "outbound", "Hi there, this is Lucy.");
+    await appendMessage(conversation.id, "outbound", "Hi there, this is Chris.");
     await appendMessage(conversation.id, "inbound", "yes I'm interested", { sentiment: "positive" });
 
     const res = await agent.get("/api/app/conversations");

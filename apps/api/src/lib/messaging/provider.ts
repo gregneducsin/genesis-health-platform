@@ -1,5 +1,5 @@
 /**
- * Provider for the Lucy conversation loop — assembles the system prompt and
+ * Provider for the Chris conversation loop — assembles the system prompt and
  * calls Claude with a forced tool call so the response always matches
  * ClaudeInteractiveSchema.
  *
@@ -58,7 +58,7 @@ const MAX_TRANSCRIPT_CHARS = 8_000;
 
 function buildTranscript(messages: BotPreviewRequestBody["messages"]): string {
   const capped = [...messages].slice(-MAX_TRANSCRIPT_MESSAGES);
-  const lines = capped.map((m) => `${m.direction === "inbound" ? "Patient" : "Lucy"}: ${m.body}`);
+  const lines = capped.map((m) => `${m.direction === "inbound" ? "Patient" : "Chris"}: ${m.body}`);
   let text = lines.join("\n");
   if (text.length > MAX_TRANSCRIPT_CHARS) {
     text = "...\n" + text.slice(-(MAX_TRANSCRIPT_CHARS - 4));
@@ -204,7 +204,7 @@ function buildSystemPrompt(body: BotPreviewRequestBody, knowledgeCatalog: readon
   const objectionSection = buildObjectionSection(body.objectionStage, body.objectionKey);
 
   return `\
-You are Joy, an automated assistant for Genesis Health's weight-management outreach team.
+You are Chris, an automated assistant for Genesis Health's weight-management outreach team.
 You are already in an ongoing SMS text-message conversation with a potential patient.
 DO NOT re-introduce yourself. Never mention your own name again unless directly asked your identity.
 
@@ -310,7 +310,7 @@ nextQuestion rules:
 
 const BOT_REPLY_TOOL = {
   name: "bot_reply",
-  description: "Return Lucy's structured reply to the patient's message.",
+  description: "Return Chris's structured reply to the patient's message.",
   input_schema: {
     type: "object" as const,
     properties: {

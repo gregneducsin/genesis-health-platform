@@ -6,7 +6,7 @@ import { pool } from "@luma/db";
  * call's `fn` finishes (successfully or not), then proceeds seeing whatever
  * state the first call left behind.
  *
- * Built for serializing the Lucy/Sarah inbound-message pipelines per person:
+ * Built for serializing the Chris/Mia inbound-message pipelines per person:
  * without this, a customer double-texting (two inbound SMS within the same
  * few hundred ms) could start two overlapping turns that each read the same
  * stale conversation state, each call Claude independently without seeing

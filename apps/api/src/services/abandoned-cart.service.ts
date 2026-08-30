@@ -144,7 +144,7 @@ async function sendOpener(personId: string): Promise<SendResult> {
   // A person can already have an active conversation by the time their
   // questionnaire abandonment fires this opener — most commonly, they came
   // in as a Meta lead first and only later started (then abandoned) the
-  // Bask questionnaire separately. Re-sending the full "Hi, this is Joy"
+  // Bask questionnaire separately. Re-sending the full "Hi, this is Chris"
   // opener into that same thread reads as a robotic duplicate introduction
   // — see renderAbandonedCartFollowUp's docstring. The abandoned-
   // questionnaire nudge itself is still real signal worth sending, just
@@ -164,7 +164,7 @@ async function sendOpener(personId: string): Promise<SendResult> {
     const reason = err instanceof Error ? err.message : String(err);
     logger.warn({ personId, reason }, "abandoned-cart opener send failed");
     // Still logged for visibility even though the send failed — this is what
-    // Lucy's opener would have said, once a provider exists.
+    // Chris's opener would have said, once a provider exists.
     await appendMessage(conversation.id, "outbound", text, {});
     await updateConversationState(conversation.id, { promoOffered: true });
     return { ok: false, reason };

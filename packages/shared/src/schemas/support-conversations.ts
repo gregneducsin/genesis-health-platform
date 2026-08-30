@@ -18,7 +18,7 @@ export const supportConversationMessageSchema = z.object({
   direction: z.enum(["inbound", "outbound"]),
   body: z.string(),
   sentiment: z.enum(["positive", "neutral", "negative"]).nullable(),
-  /** Who wrote an outbound message — "ai" (Lisa, or an automated trigger) vs "staff" (typed into the reply box). Null on inbound messages. */
+  /** Who wrote an outbound message — "ai" (Mia, or an automated trigger) vs "staff" (typed into the reply box). Null on inbound messages. */
   sentBy: z.enum(["ai", "staff"]).nullable(),
   /** Which staff member sent it, when sentBy is "staff". Null otherwise. */
   sentByStaffEmail: z.string().nullable(),

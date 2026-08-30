@@ -388,7 +388,7 @@ function ConversationDetailPanel({
                     {m.body}
                   </span>
                   <div className="flex items-center gap-2 px-1">
-                    {m.direction === "outbound" && <SenderBadge sentBy={m.sentBy} staffEmail={m.sentByStaffEmail} botName="Joy" />}
+                    {m.direction === "outbound" && <SenderBadge sentBy={m.sentBy} staffEmail={m.sentByStaffEmail} botName="Chris" />}
                     <span className="text-[11px] text-gray-400">{formatTime(m.createdAt)}</span>
                     <SentimentBadge sentiment={m.sentiment} />
                   </div>

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, customersTable } from "@luma/db";
-import { runSarahTurn, type SarahTurnResult } from "./sarah-conversation.service.js";
+import { runMiaTurn, type MiaTurnResult } from "./mia-conversation.service.js";
 import {
   getOrCreateSupportEmailConversation,
   getSupportEmailConversationDetail,
@@ -28,10 +28,10 @@ function replySubject(originalSubject: string): string {
   return /^re:/i.test(originalSubject.trim()) ? originalSubject : `Re: ${originalSubject}`;
 }
 
-const SIGN_OFF = "Lisa at Genesis Health";
+const SIGN_OFF = "Mia at Genesis Health";
 
 /**
- * Same randomized-greeting reasoning as lucy-email-dispatch.service.ts's
+ * Same randomized-greeting reasoning as chris-email-dispatch.service.ts's
  * withGreetingAndSignOff — always opening "Hi <name>," reads as templated,
  * so this varies between the full greeting, just the name, or no greeting
  * line at all.
@@ -49,7 +49,7 @@ function withGreetingAndSignOff(firstName: string, bodyText: string): string {
   return `${opening}\n\n— ${SIGN_OFF}`;
 }
 
-/** Email twin of sarah-dispatch.service.ts's sendAndLog — same fail-soft and DND-checked-here reasoning as lucy-email-dispatch.service.ts's sendAndLog. */
+/** Email twin of mia-dispatch.service.ts's sendAndLog — same fail-soft and DND-checked-here reasoning as chris-email-dispatch.service.ts's sendAndLog. */
 async function sendAndLog(
   personId: string,
   conversationId: string,
@@ -61,14 +61,14 @@ async function sendAndLog(
   fromEmailOverride: string | null,
 ): Promise<void> {
   if (await isCustomerEmailDnd(personId)) {
-    logger.warn({ personId, conversationId }, "outbound Sarah email not sent: customer is do-not-disturb");
+    logger.warn({ personId, conversationId }, "outbound Mia email not sent: customer is do-not-disturb");
     return;
   }
 
   const signedBody = withGreetingAndSignOff(firstName, bodyText);
   let messageId: string | null = null;
   try {
-    const { provider, fromName } = getEmailProvider("sarah");
+    const { provider, fromName } = getEmailProvider("mia");
     const unsubscribeUrl = buildUnsubscribeUrl(personId);
     const html = renderConversationReplyEmail(signedBody, unsubscribeUrl);
     const result = await provider.sendEmail(email, subject, html, {
@@ -80,15 +80,15 @@ async function sendAndLog(
     });
     messageId = result.messageId;
   } catch (err) {
-    logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "outbound Sarah email send failed");
+    logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "outbound Mia email send failed");
   }
   await appendSupportEmailMessage(conversationId, "outbound", subject, signedBody, { messageId, inReplyTo });
 }
 
 /**
- * Email twin of sarah-dispatch.service.ts's processInboundSupportMessage —
- * same runSarahTurn guardrail pipeline unchanged, same combined-reply
- * adaptation as lucy-email-dispatch.service.ts (reply + nextQuestion sent
+ * Email twin of mia-dispatch.service.ts's processInboundSupportMessage —
+ * same runMiaTurn guardrail pipeline unchanged, same combined-reply
+ * adaptation as chris-email-dispatch.service.ts (reply + nextQuestion sent
  * as one email, not two).
  */
 export async function processInboundSupportEmail(
@@ -97,7 +97,7 @@ export async function processInboundSupportEmail(
   bodyText: string,
   messageId: string | null,
   receivingAddress?: string,
-): Promise<SarahTurnResult> {
+): Promise<MiaTurnResult> {
   return withPersonLock(personId, () => processInboundSupportEmailLocked(personId, subject, bodyText, messageId, receivingAddress));
 }
 
@@ -107,26 +107,26 @@ async function processInboundSupportEmailLocked(
   bodyText: string,
   messageId: string | null,
   receivingAddress?: string,
-): Promise<SarahTurnResult> {
+): Promise<MiaTurnResult> {
   const conversation = await getOrCreateSupportEmailConversation(personId, receivingAddress);
   const priorMessages = await listSupportEmailMessages(conversation.id);
   const inboundMessage = await appendSupportEmailMessage(conversation.id, "inbound", subject, bodyText, { messageId });
 
   const body = toSupportEmailPreviewBody(conversation, [...priorMessages, inboundMessage]);
-  let result: SarahTurnResult;
+  let result: MiaTurnResult;
   try {
-    result = await runSarahTurn(body);
+    result = await runMiaTurn(body);
   } catch (err) {
-    // Same reasoning as sarah-dispatch.service.ts's (SMS) equivalent catch:
-    // anything that escapes runSarahTurn itself isn't a guardrail rejection,
+    // Same reasoning as mia-dispatch.service.ts's (SMS) equivalent catch:
+    // anything that escapes runMiaTurn itself isn't a guardrail rejection,
     // but the patient still got silence, so it needs the same staff-visible flag.
-    logger.error({ personId, conversationId: conversation.id, reason: err instanceof Error ? err.message : String(err) }, "Sarah email turn threw unexpectedly — no outbound email sent");
+    logger.error({ personId, conversationId: conversation.id, reason: err instanceof Error ? err.message : String(err) }, "Mia email turn threw unexpectedly — no outbound email sent");
     await updateSupportEmailConversationState(conversation.id, { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "exception" }) });
     return { ok: false, code: "UNEXPECTED_ERROR" };
   }
 
   if (!result.ok) {
-    logger.warn({ personId, conversationId: conversation.id, code: result.code }, "Sarah email turn rejected — no outbound email sent");
+    logger.warn({ personId, conversationId: conversation.id, code: result.code }, "Mia email turn rejected — no outbound email sent");
     await updateSupportEmailConversationState(conversation.id, { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "rejected", code: result.code }) });
     return result;
   }
@@ -140,7 +140,7 @@ async function processInboundSupportEmailLocked(
   }
 
   // action === "pause" is unique to the OPT_OUT pre-check code (see
-  // PRE_CHECK_RESULTS in sarah-conversation.service.ts) — every other
+  // PRE_CHECK_RESULTS in mia-conversation.service.ts) — every other
   // pre-check code maps to "staff_review" instead.
   if (result.action === "pause") {
     await setCustomerEmailDnd(personId, true);
@@ -164,7 +164,7 @@ export type EmailStaffReplyResult = { readonly sent: true } | { readonly sent: f
 /**
  * A human-authored reply to an email conversation — email twin of
  * support-conversations.service.ts's sendStaffReply (SMS), same reasoning
- * as lucy-email-dispatch.service.ts's sendEmailStaffReply.
+ * as chris-email-dispatch.service.ts's sendEmailStaffReply.
  */
 export async function sendEmailStaffReply(conversationId: string, body: string, staffEmail: string): Promise<EmailStaffReplyResult> {
   const detail = await getSupportEmailConversationDetail(conversationId);
@@ -178,7 +178,7 @@ export async function sendEmailStaffReply(conversationId: string, body: string, 
   let messageId: string | null = null;
   let sendFailed = false;
   try {
-    const { provider, fromName } = getEmailProvider("sarah");
+    const { provider, fromName } = getEmailProvider("mia");
     const unsubscribeUrl = buildUnsubscribeUrl(detail.conversation.personId);
     const html = renderConversationReplyEmail(signedBody, unsubscribeUrl);
     const result = await provider.sendEmail(customer.email, subject, html, {

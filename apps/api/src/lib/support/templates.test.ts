@@ -10,9 +10,9 @@ import {
 } from "./templates.js";
 
 describe("renderOrderReceivedMessage", () => {
-  it("introduces Lisa and mentions the portal link", () => {
+  it("introduces Mia and mentions the portal link", () => {
     const text = renderOrderReceivedMessage("Jamie");
-    expect(text).toContain("this is Lisa");
+    expect(text).toContain("this is Mia");
     expect(text).toContain("https://patient.trygenesis.com/login");
   });
 
@@ -23,9 +23,9 @@ describe("renderOrderReceivedMessage", () => {
 });
 
 describe("renderRefillOrderReceivedMessage", () => {
-  it("introduces Lisa, says refill (not the first-order welcome copy), and mentions the portal link", () => {
+  it("introduces Mia, says refill (not the first-order welcome copy), and mentions the portal link", () => {
     const text = renderRefillOrderReceivedMessage("Jamie");
-    expect(text).toContain("this is Lisa");
+    expect(text).toContain("this is Mia");
     expect(text).toContain("refill");
     expect(text).not.toContain("the doctor is reviewing it");
     expect(text).toContain("https://patient.trygenesis.com/login");

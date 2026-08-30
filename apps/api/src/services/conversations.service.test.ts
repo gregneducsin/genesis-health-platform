@@ -130,7 +130,7 @@ describe("updateConversationState", () => {
 });
 
 describe("toBotPreviewBody", () => {
-  it("maps conversation state and history into the shape runLucyTurn expects", async () => {
+  it("maps conversation state and history into the shape runChrisTurn expects", async () => {
     const personId = await seedCustomer();
     const conversation = await getOrCreateConversation(personId);
     await updateConversationState(conversation.id, {

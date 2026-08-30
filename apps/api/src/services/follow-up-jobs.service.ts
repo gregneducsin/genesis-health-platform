@@ -94,7 +94,7 @@ export async function sweepFollowUpJobs(): Promise<FollowUpSweepResult> {
     // follows (the abandoned-cart opener, the 6-day check-in) — without
     // this, a follow-up nudge is a real text the customer receives that
     // never shows up in their conversation history, leaving the dashboard's
-    // last-message stuck on whatever Lucy sent before the follow-up chain
+    // last-message stuck on whatever Chris sent before the follow-up chain
     // took over.
     //
     // This can be the very first SMS conversation row for this person (a

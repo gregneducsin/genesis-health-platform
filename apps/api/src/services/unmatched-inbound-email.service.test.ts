@@ -19,18 +19,18 @@ vi.mock("@anthropic-ai/sdk", () => ({
 const sendEmailMock = vi.fn();
 vi.mock("../lib/email-provider.js", async () => {
   const actual = await vi.importActual<typeof import("../lib/email-provider.js")>("../lib/email-provider.js");
-  return { ...actual, getEmailProvider: () => ({ provider: { sendEmail: sendEmailMock }, fromName: "Lucy at Genesis Health" }) };
+  return { ...actual, getEmailProvider: () => ({ provider: { sendEmail: sendEmailMock }, fromName: "Chris at Genesis Health" }) };
 });
 
 const notifySlackMock = vi.fn();
 vi.mock("../lib/slack.js", () => ({ notifySlack: (...args: unknown[]) => notifySlackMock(...args) }));
 
 // Handoff-after-lead-creation is tested here only as "was processInboundEmail
-// called with the right args" — Lucy's actual pipeline (its own Claude call,
-// guardrails, sending) is covered by lucy-email-dispatch.service.test.ts.
+// called with the right args" — Chris's actual pipeline (its own Claude call,
+// guardrails, sending) is covered by chris-email-dispatch.service.test.ts.
 const processInboundEmailMock = vi.fn();
-vi.mock("./lucy-email-dispatch.service.js", async () => {
-  const actual = await vi.importActual<typeof import("./lucy-email-dispatch.service.js")>("./lucy-email-dispatch.service.js");
+vi.mock("./chris-email-dispatch.service.js", async () => {
+  const actual = await vi.importActual<typeof import("./chris-email-dispatch.service.js")>("./chris-email-dispatch.service.js");
   return { ...actual, processInboundEmail: (...args: unknown[]) => processInboundEmailMock(...args) };
 });
 
@@ -194,7 +194,7 @@ describe("recordAndClassifyUnmatchedEmail", () => {
     expect(customer.phone).toBe("+15551239876"); // normalized
     expect(customer.leadType).toBe("Email Inquiry");
 
-    // The triggering message is handed straight to Lucy's real pipeline —
+    // The triggering message is handed straight to Chris's real pipeline —
     // not left as a generic staff-reviewed draft, and no redundant generic
     // acknowledgment sent alongside it. Handed off as a Meta-lead-style
     // conversation, not abandoned_cart.
@@ -212,7 +212,7 @@ describe("recordAndClassifyUnmatchedEmail", () => {
     expect(thread.repliedAt).not.toBeNull();
   });
 
-  it("seeds the new Lucy conversation with everything said before the triggering message, not just that one message", async () => {
+  it("seeds the new Chris conversation with everything said before the triggering message, not just that one message", async () => {
     const fromAddress = uniqueAddress("seedhistory");
     sendEmailMock.mockResolvedValueOnce({ messageId: "<ack-seed@example.com>" });
     createMock.mockResolvedValueOnce(toolResponse(classification({ summary: "First contact." })));

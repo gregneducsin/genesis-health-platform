@@ -25,17 +25,17 @@ const notifySlackMock = vi.fn();
 vi.mock("../lib/slack.js", () => ({ notifySlack: (...args: unknown[]) => notifySlackMock(...args) }));
 
 // Handoff-after-lead-creation is tested here only as "was processInboundMessage
-// called with the right args" — Lucy's actual pipeline (its own Claude call,
-// guardrails, sending) is covered by lucy-dispatch.service.test.ts.
+// called with the right args" — Chris's actual pipeline (its own Claude call,
+// guardrails, sending) is covered by chris-dispatch.service.test.ts.
 const processInboundMessageMock = vi.fn();
-vi.mock("./lucy-dispatch.service.js", async () => {
-  const actual = await vi.importActual<typeof import("./lucy-dispatch.service.js")>("./lucy-dispatch.service.js");
+vi.mock("./chris-dispatch.service.js", async () => {
+  const actual = await vi.importActual<typeof import("./chris-dispatch.service.js")>("./chris-dispatch.service.js");
   return { ...actual, processInboundMessage: (...args: unknown[]) => processInboundMessageMock(...args) };
 });
 
 const processInboundSupportMessageMock = vi.fn();
-vi.mock("./sarah-dispatch.service.js", async () => {
-  const actual = await vi.importActual<typeof import("./sarah-dispatch.service.js")>("./sarah-dispatch.service.js");
+vi.mock("./mia-dispatch.service.js", async () => {
+  const actual = await vi.importActual<typeof import("./mia-dispatch.service.js")>("./mia-dispatch.service.js");
   return { ...actual, processInboundSupportMessage: (...args: unknown[]) => processInboundSupportMessageMock(...args) };
 });
 
@@ -248,7 +248,7 @@ describe("recordAndClassifyUnmatchedSms", () => {
     expect(thread.status).toBe("replied");
   });
 
-  it("seeds the new Lucy conversation with everything said before the triggering message, not just that one message", async () => {
+  it("seeds the new Chris conversation with everything said before the triggering message, not just that one message", async () => {
     const phone = uniquePhone();
     sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_ack_seed" });
     createMock.mockResolvedValueOnce(toolResponse(classification({ summary: "First contact." })));
@@ -468,7 +468,7 @@ describe("recordAndClassifyUnmatchedSms", () => {
     expect(allWithEmail).toHaveLength(1); // no duplicate created
   });
 
-  it("seeds the existing customer's conversation with everything said before auto-connecting — a bare trigger message like just an email address left Lucy nothing to react to and produced total silence in production", async () => {
+  it("seeds the existing customer's conversation with everything said before auto-connecting — a bare trigger message like just an email address left Chris nothing to react to and produced total silence in production", async () => {
     const existingEmail = `jack-${crypto.randomUUID()}@example.com`;
     const [existing] = await db
       .insert(customersTable)

@@ -1,5 +1,5 @@
 /**
- * Immutable source artifact for the Lucy knowledge document.
+ * Immutable source artifact for the Chris knowledge document.
  *
  * This file stores the complete approved knowledge document exactly as received
  * from medical staff and legal counsel. It must not be edited, paraphrased,
@@ -9,7 +9,7 @@
  * this source.
  *
  * Content and pricing reviewed and reconfirmed accurate against the business
- * on 2026-08-15 (see verifyLucySourceIntegrity for the hash this reconfirms).
+ * on 2026-08-15 (see verifyChrisSourceIntegrity for the hash this reconfirms).
  *
  * Import verification (computed at rest and verified at test time):
  *   Original file SHA-256 (CRLF)  : 0132dc51089193d2f3e0bf7382c28df8d40c5d4bbed904785f3b6f1d73609108
@@ -30,8 +30,8 @@ import { createHash } from "node:crypto";
 
 // No database imports. No outbound SMS SDK imports.
 
-/** Metadata for the immutable Lucy knowledge source document. */
-export interface LucyKnowledgeSourceMeta {
+/** Metadata for the immutable Chris knowledge source document. */
+export interface ChrisKnowledgeSourceMeta {
   /** Canonical version identifier. */
   readonly version: string;
   /** Approval state: "approved" means cleared for all environments. */
@@ -64,8 +64,8 @@ export interface LucyKnowledgeSourceMeta {
   readonly sectionCount: number;
 }
 
-export const LUCY_KNOWLEDGE_META: LucyKnowledgeSourceMeta = {
-  version: "lucy-knowledge-v1",
+export const CHRIS_KNOWLEDGE_META: ChrisKnowledgeSourceMeta = {
+  version: "chris-knowledge-v1",
   status: "approved",
   source: "medical_staff_and_legal_approved",
   // approvedBy records the owner's explicit attestation that the document was
@@ -86,7 +86,7 @@ export const LUCY_KNOWLEDGE_META: LucyKnowledgeSourceMeta = {
 };
 
 /** The 17 expected top-level section names (order-insensitive for comparison). */
-export const LUCY_KNOWLEDGE_EXPECTED_SECTIONS = [
+export const CHRIS_KNOWLEDGE_EXPECTED_SECTIONS = [
   "ROLE AND PURPOSE",
   "COMPANY INFORMATION",
   "MEDICATIONS OFFERED",
@@ -110,7 +110,7 @@ export const LUCY_KNOWLEDGE_EXPECTED_SECTIONS = [
  * The exact approved knowledge document content, LF-normalised from the
  * original CRLF source. Do not modify this string.
  */
-export const LUCY_KNOWLEDGE_CONTENT: string = [
+export const CHRIS_KNOWLEDGE_CONTENT: string = [
   "# ROLE AND PURPOSE",
   "",
   "You are a knowledgeable, friendly customer support and enrollment assistant for our nationwide telehealth weight-loss program.",
@@ -561,7 +561,7 @@ export const LUCY_KNOWLEDGE_CONTENT: string = [
  * Compute the SHA-256 of the stored content and compare against the recorded
  * hash. Returns a verification report suitable for logging and test assertions.
  */
-export function verifyLucySourceIntegrity(): {
+export function verifyChrisSourceIntegrity(): {
   ok: boolean;
   originalFileHash: string;
   contentHash: string;
@@ -579,7 +579,7 @@ export function verifyLucySourceIntegrity(): {
   noOmittedSections: boolean;
   noAddedSections: boolean;
 } {
-  const content = LUCY_KNOWLEDGE_CONTENT;
+  const content = CHRIS_KNOWLEDGE_CONTENT;
   const storedHash = createHash("sha256").update(content, "utf8").digest("hex");
   const bytes = Buffer.byteLength(content, "utf8");
   const lines = content.split("\n");
@@ -587,23 +587,23 @@ export function verifyLucySourceIntegrity(): {
   const lineCount = lines.length - 1;
   const foundSections = lines.filter((l) => /^# /.test(l)).map((l) => l.slice(2).trim());
 
-  const expected = [...LUCY_KNOWLEDGE_EXPECTED_SECTIONS] as string[];
+  const expected = [...CHRIS_KNOWLEDGE_EXPECTED_SECTIONS] as string[];
   const omittedSections = expected.filter((s) => !foundSections.includes(s));
   const addedSections = foundSections.filter((s) => !expected.includes(s));
-  const hashesMatch = storedHash === LUCY_KNOWLEDGE_META.contentHash;
+  const hashesMatch = storedHash === CHRIS_KNOWLEDGE_META.contentHash;
 
   return {
     ok: hashesMatch && omittedSections.length === 0 && addedSections.length === 0,
-    originalFileHash: LUCY_KNOWLEDGE_META.originalFileHash,
-    contentHash: LUCY_KNOWLEDGE_META.contentHash,
+    originalFileHash: CHRIS_KNOWLEDGE_META.originalFileHash,
+    contentHash: CHRIS_KNOWLEDGE_META.contentHash,
     storedHash,
     hashesMatch,
     byteCount: bytes,
-    byteCountMatch: bytes === LUCY_KNOWLEDGE_META.byteCount,
+    byteCountMatch: bytes === CHRIS_KNOWLEDGE_META.byteCount,
     lineCount,
-    lineCountMatch: lineCount === LUCY_KNOWLEDGE_META.lineCount,
+    lineCountMatch: lineCount === CHRIS_KNOWLEDGE_META.lineCount,
     sectionCount: foundSections.length,
-    sectionCountMatch: foundSections.length === LUCY_KNOWLEDGE_META.sectionCount,
+    sectionCountMatch: foundSections.length === CHRIS_KNOWLEDGE_META.sectionCount,
     foundSections,
     omittedSections,
     addedSections,

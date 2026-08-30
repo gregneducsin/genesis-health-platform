@@ -6,7 +6,7 @@ import type { ObjectionKey } from "../lib/messaging/objection-handling.js";
 import { createIntakeLink } from "./intake-links.service.js";
 import { logger } from "../lib/logger.js";
 
-export type LucyTurnResult =
+export type ChrisTurnResult =
   | {
       ok: true;
       action: ClaudeInteractiveResult["action"];
@@ -35,7 +35,7 @@ export type LucyTurnResult =
  * the honest, always-safe answer to "is this safe for me" / "will you
  * prescribe me a higher dose" is the same regardless of the specific
  * question — it's the doctor's call, made during questionnaire review, not
- * something Lucy is ever positioned to answer. Still routes to staff
+ * something Chris is ever positioned to answer. Still routes to staff
  * (action: "staff_review") so a human sees it, but the customer isn't left
  * hanging in the meantime. The actual reply text is picked at random from
  * INDIVIDUALIZED_MEDICAL_REPLIES below (see pickVariant), not fixed here —
@@ -63,7 +63,7 @@ const INDIVIDUALIZED_MEDICAL_REPLIES = [
  * the dose) instead of just deflecting — the lead is asking because they're
  * uncomfortable right now, and "that's up to the doctor" alone doesn't tell
  * them anything is actually fixable. Still frames both as things the doctor
- * reviews/discusses, never as Joy telling them what to do — nothing here is
+ * reviews/discusses, never as Chris telling them what to do — nothing here is
  * an instruction to take an OTC medication or change a dose on their own.
  */
 const SIDE_EFFECT_REPORT_REPLIES = [
@@ -108,7 +108,7 @@ const RETRYABLE_POST_CHECK_CODES = new Set(["MISSING_NEXT_QUESTION", "INVALID_NE
 const MAX_ATTEMPTS = 3;
 
 /**
- * Run one turn of the Lucy conversation loop: pre-check the inbound message,
+ * Run one turn of the Chris conversation loop: pre-check the inbound message,
  * call Claude if it isn't blocked, post-check the response, and — on
  * action=send_form — mint the actual per-lead signup link (Claude never sees
  * or outputs a real one).
@@ -119,7 +119,7 @@ const MAX_ATTEMPTS = 3;
  * rejection (see RETRYABLE_POST_CHECK_CODES) gets exactly one retry of the
  * same call before giving up the same way.
  */
-export async function runLucyTurn(personId: string, body: BotPreviewRequestBody): Promise<LucyTurnResult> {
+export async function runChrisTurn(personId: string, body: BotPreviewRequestBody): Promise<ChrisTurnResult> {
   const lastInbound = [...body.messages].reverse().find((m) => m.direction === "inbound");
   if (lastInbound) {
     const pre = interactivePreCheck(lastInbound.body, body.lastQuestion);
@@ -162,7 +162,7 @@ export async function runLucyTurn(personId: string, body: BotPreviewRequestBody)
       raw = await callClaudeInteractive(body, enabledTopics);
     } catch (err) {
       if (err instanceof ProviderError) {
-        logger.error({ category: err.category }, "Lucy provider call failed");
+        logger.error({ category: err.category }, "Chris provider call failed");
         return { ok: false, code: err.category };
       }
       throw err;
@@ -172,7 +172,7 @@ export async function runLucyTurn(personId: string, body: BotPreviewRequestBody)
     if (post.ok) break;
 
     const canRetry = attempt < MAX_ATTEMPTS && RETRYABLE_POST_CHECK_CODES.has(post.code);
-    logger.warn({ code: post.code, attempt, retrying: canRetry }, "Lucy reply rejected by post-check");
+    logger.warn({ code: post.code, attempt, retrying: canRetry }, "Chris reply rejected by post-check");
     if (!canRetry) {
       return { ok: false, code: post.code };
     }

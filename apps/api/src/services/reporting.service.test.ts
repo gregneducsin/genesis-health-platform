@@ -131,7 +131,7 @@ describe("getFunnelSummary", () => {
 });
 
 describe("getMessageVolumeByChannel", () => {
-  it("counts inbound/outbound messages, combining Lucy+Sarah per channel", async () => {
+  it("counts inbound/outbound messages, combining Chris+Mia per channel", async () => {
     const beforeRows = await getMessageVolumeByChannel();
     const before = Object.fromEntries(beforeRows.map((r) => [r.channel, r]));
 

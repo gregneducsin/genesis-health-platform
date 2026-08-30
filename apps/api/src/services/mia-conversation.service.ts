@@ -1,19 +1,19 @@
 import { supportPreCheck, supportPostCheck } from "../lib/support/safety.js";
-import { callSarahInteractive, SarahProviderError } from "../lib/support/provider.js";
-import { getSarahEnabledTopics, APPROVED_PORTAL_URL } from "../lib/messaging/knowledge-catalog.js";
-import type { SarahPreviewRequestBody, SarahInteractiveResult } from "../lib/support/types.js";
+import { callMiaInteractive, MiaProviderError } from "../lib/support/provider.js";
+import { getMiaEnabledTopics, APPROVED_PORTAL_URL } from "../lib/messaging/knowledge-catalog.js";
+import type { MiaPreviewRequestBody, MiaInteractiveResult } from "../lib/support/types.js";
 import { logger } from "../lib/logger.js";
 
 /**
  * PRESCRIPTION_QUESTION used to get a null reply — the patient was left in
  * silence while the conversation quietly went to the staff queue (see a real
  * production case, ported from Luma: a patient asked what dose she was on
- * and got nothing back). Same reasoning as Lucy's INDIVIDUALIZED_MEDICAL_REPLIES:
+ * and got nothing back). Same reasoning as Chris's INDIVIDUALIZED_MEDICAL_REPLIES:
  * the honest, always-safe answer to any prescription-specifics question is
  * the same regardless of the specific question — log into the patient
  * portal to see the prescription or message the doctor directly — so
  * there's no reason to leave the patient hanging while still routing to
- * staff. Varied rather than fixed (like Lucy's individualized-medical
+ * staff. Varied rather than fixed (like Chris's individualized-medical
  * replies) since this isn't a compliance-critical fixed script the way
  * OPT_OUT/EMERGENCY_CONTENT are.
  */
@@ -25,7 +25,7 @@ const PRESCRIPTION_QUESTION_REPLIES = [
 
 /**
  * COLD_CHAIN_CONCERN — a report that the medication may not have stayed cold
- * in transit (real production case, ported from Luma). Sarah has no way to
+ * in transit (real production case, ported from Luma). Mia has no way to
  * assess whether the medication is still safe to use, so this always routes
  * to staff, but the patient still gets pointed straight at the fastest real
  * channel — messaging the doctor or support directly through the patient
@@ -40,7 +40,7 @@ const COLD_CHAIN_CONCERN_REPLIES = [
 
 /**
  * PAUSE_PRESCRIPTION_REQUEST — a patient asking to pause, hold, or skip
- * their prescription/order. Sarah has no way to actually action this, so
+ * their prescription/order. Mia has no way to actually action this, so
  * she must never say or imply it's been paused — that risks the patient
  * believing a shipment/dose is handled when nothing has changed. She points
  * them to the self-service portal and the conversation routes to staff, the
@@ -56,10 +56,10 @@ function pickVariant(variants: readonly string[]): string {
   return variants[Math.floor(Math.random() * variants.length)];
 }
 
-export type SarahTurnResult =
+export type MiaTurnResult =
   | {
       ok: true;
-      action: SarahInteractiveResult["action"];
+      action: MiaInteractiveResult["action"];
       reply: string | null;
       nextQuestion: string | null;
       inboundSentiment: "positive" | "neutral" | "negative" | null;
@@ -86,14 +86,14 @@ const PRE_CHECK_RESULTS: Record<string, { action: "pause" | "staff_review"; repl
 };
 
 /**
- * Same mechanical-vs-safety retry split as Lucy's conversation loop (see
- * lucy-conversation.service.ts's docstring) — format-only rejections get one
+ * Same mechanical-vs-safety retry split as Chris's conversation loop (see
+ * chris-conversation.service.ts's docstring) — format-only rejections get one
  * retry of the identical prompt; safety-relevant rejections never retry.
  */
 const RETRYABLE_POST_CHECK_CODES = new Set(["MISSING_NEXT_QUESTION", "INVALID_NEXT_QUESTION", "UNEXPECTED_NEXT_QUESTION", "QUESTION_MARK_IN_REPLY", "REPEATED_DRAFT"]);
 const MAX_ATTEMPTS = 3;
 
-export async function runSarahTurn(body: SarahPreviewRequestBody): Promise<SarahTurnResult> {
+export async function runMiaTurn(body: MiaPreviewRequestBody): Promise<MiaTurnResult> {
   const lastInbound = [...body.messages].reverse().find((m) => m.direction === "inbound");
   if (lastInbound) {
     const pre = supportPreCheck(lastInbound.body);
@@ -121,17 +121,17 @@ export async function runSarahTurn(body: SarahPreviewRequestBody): Promise<Sarah
     }
   }
 
-  const enabledTopics = getSarahEnabledTopics();
+  const enabledTopics = getMiaEnabledTopics();
   const permittedTopicKeys = new Set(enabledTopics.map((t) => t.key));
 
   let post: ReturnType<typeof supportPostCheck> | undefined;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    let raw: SarahInteractiveResult;
+    let raw: MiaInteractiveResult;
     try {
-      raw = await callSarahInteractive(body, enabledTopics);
+      raw = await callMiaInteractive(body, enabledTopics);
     } catch (err) {
-      if (err instanceof SarahProviderError) {
-        logger.error({ category: err.category }, "Sarah provider call failed");
+      if (err instanceof MiaProviderError) {
+        logger.error({ category: err.category }, "Mia provider call failed");
         return { ok: false, code: err.category };
       }
       throw err;
@@ -141,7 +141,7 @@ export async function runSarahTurn(body: SarahPreviewRequestBody): Promise<Sarah
     if (post.ok) break;
 
     const canRetry = attempt < MAX_ATTEMPTS && RETRYABLE_POST_CHECK_CODES.has(post.code);
-    logger.warn({ code: post.code, attempt, retrying: canRetry }, "Sarah reply rejected by post-check");
+    logger.warn({ code: post.code, attempt, retrying: canRetry }, "Mia reply rejected by post-check");
     if (!canRetry) {
       return { ok: false, code: post.code };
     }

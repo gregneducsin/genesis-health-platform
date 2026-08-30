@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, customersTable } from "@luma/db";
-import type { LucyTurnResult } from "./lucy-conversation.service.js";
+import type { ChrisTurnResult } from "./chris-conversation.service.js";
 import { isCustomerEmailDnd, setCustomerEmailDnd, setCustomerSmsDnd } from "./dnd.service.js";
 
 beforeAll(() => {
@@ -12,19 +12,19 @@ beforeAll(() => {
   process.env.INTAKE_LINK_BASE_URL = "http://localhost:3000";
 });
 
-const runLucyTurnMock = vi.fn();
-vi.mock("./lucy-conversation.service.js", async () => {
-  const actual = await vi.importActual<typeof import("./lucy-conversation.service.js")>("./lucy-conversation.service.js");
-  return { ...actual, runLucyTurn: (...args: unknown[]) => runLucyTurnMock(...args) };
+const runChrisTurnMock = vi.fn();
+vi.mock("./chris-conversation.service.js", async () => {
+  const actual = await vi.importActual<typeof import("./chris-conversation.service.js")>("./chris-conversation.service.js");
+  return { ...actual, runChrisTurn: (...args: unknown[]) => runChrisTurnMock(...args) };
 });
 
 const sendEmailMock = vi.fn();
 vi.mock("../lib/email-provider.js", async () => {
   const actual = await vi.importActual<typeof import("../lib/email-provider.js")>("../lib/email-provider.js");
-  return { ...actual, getEmailProvider: () => ({ provider: { sendEmail: sendEmailMock }, fromName: "Joy at Genesis Health" }) };
+  return { ...actual, getEmailProvider: () => ({ provider: { sendEmail: sendEmailMock }, fromName: "Chris at Genesis Health" }) };
 });
 
-const { processInboundEmail, sendEmailStaffReply } = await import("./lucy-email-dispatch.service.js");
+const { processInboundEmail, sendEmailStaffReply } = await import("./chris-email-dispatch.service.js");
 const { getOrCreateEmailConversation, listEmailMessages, appendEmailMessage, updateEmailConversationState } = await import("./email-conversations.service.js");
 
 async function seedCustomer(): Promise<string> {
@@ -35,7 +35,7 @@ async function seedCustomer(): Promise<string> {
   return row.id;
 }
 
-function okResult(overrides: Partial<Extract<LucyTurnResult, { ok: true }>> = {}): LucyTurnResult {
+function okResult(overrides: Partial<Extract<ChrisTurnResult, { ok: true }>> = {}): ChrisTurnResult {
   return {
     ok: true,
     action: "reply",
@@ -59,10 +59,10 @@ function okResult(overrides: Partial<Extract<LucyTurnResult, { ok: true }>> = {}
 
 describe("processInboundEmail", () => {
   it("persists the inbound email, sends a combined reply+nextQuestion email threaded to it, and logs it", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
     sendEmailMock.mockResolvedValueOnce({ messageId: "<reply-1@example.com>" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
 
     const personId = await seedCustomer();
     const result = await processInboundEmail(personId, "Question about pricing", "How much is semaglutide?", "<inbound-1@example.com>");
@@ -83,10 +83,10 @@ describe("processInboundEmail", () => {
   });
 
   it("replies from the exact mailbox this customer's email arrived at, not the provider's default", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
     sendEmailMock.mockResolvedValueOnce({ messageId: "<reply-help@example.com>" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
 
     const personId = await seedCustomer();
     await processInboundEmail(personId, "Question", "Do you ship to Texas?", "<inbound-help@example.com>", undefined, "help@example.com");
@@ -100,16 +100,16 @@ describe("processInboundEmail", () => {
   });
 
   it("updates the receiving mailbox — and replies from the new one — when the same customer later writes to a different address", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
     sendEmailMock.mockResolvedValueOnce({ messageId: "<first@example.com>" });
 
     const personId = await seedCustomer();
     await processInboundEmail(personId, "Q1", "First message", "<m1@example.com>", undefined, "help@example.com");
     expect((await getOrCreateEmailConversation(personId)).receivingAddress).toBe("help@example.com");
 
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
     sendEmailMock.mockResolvedValueOnce({ messageId: "<second@example.com>" });
     await processInboundEmail(personId, "Q2", "Second message", "<m2@example.com>", undefined, "support@example.com");
 
@@ -119,10 +119,10 @@ describe("processInboundEmail", () => {
   });
 
   it("schedules a 2-week re-engagement text once think_about_it reaches stand-down over email too", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
     sendEmailMock.mockResolvedValueOnce({ messageId: "<reply-standdown@example.com>" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "think_about_it", objectionStage: 2, nextQuestion: null }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "think_about_it", objectionStage: 2, nextQuestion: null }));
 
     const personId = await seedCustomer();
     await processInboundEmail(personId, "Question about pricing", "not sure I'm ready yet", "<inbound-standdown@example.com>");
@@ -134,11 +134,11 @@ describe("processInboundEmail", () => {
     expect(trigger.status).toBe("pending");
   });
 
-  it("greets the customer by first name and signs off as Joy — Claude's draft is only the substantive reply, not a full email", async () => {
-    runLucyTurnMock.mockClear();
+  it("greets the customer by first name and signs off as Chris — Claude's draft is only the substantive reply, not a full email", async () => {
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
     sendEmailMock.mockResolvedValueOnce({ messageId: "<reply-2@example.com>" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
 
     // The greeting style is randomized (see withGreetingAndSignOff) — pin it
     // to the full "Hi <name>," style so this test stays deterministic.
@@ -149,22 +149,22 @@ describe("processInboundEmail", () => {
 
       const [, , html] = sendEmailMock.mock.calls[0];
       expect(html).toContain("Hi Email,");
-      expect(html).toContain("Joy at Genesis Health");
+      expect(html).toContain("Chris at Genesis Health");
 
       const conversation = await getOrCreateEmailConversation(personId);
       const messages = await listEmailMessages(conversation.id);
       expect(messages[1].body).toContain("Hi Email,");
-      expect(messages[1].body).toContain("— Joy at Genesis Health");
+      expect(messages[1].body).toContain("— Chris at Genesis Health");
     } finally {
       randomSpy.mockRestore();
     }
   });
 
   it("does not double 'Re:' when the inbound subject already has one", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
     sendEmailMock.mockResolvedValueOnce({ messageId: "<reply-2@example.com>" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
 
     const personId = await seedCustomer();
     await processInboundEmail(personId, "Re: Question about pricing", "Tell me more", null);
@@ -174,10 +174,10 @@ describe("processInboundEmail", () => {
   });
 
   it("sends the OPT_OUT confirmation reply, then marks the customer DND — the confirmation itself is not blocked", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
     sendEmailMock.mockResolvedValueOnce({ messageId: "<optout-1@example.com>" });
-    runLucyTurnMock.mockResolvedValueOnce(
+    runChrisTurnMock.mockResolvedValueOnce(
       okResult({
         action: "pause",
         reply: "You've been unsubscribed and won't receive further messages. Reply HELP for help.",
@@ -197,9 +197,9 @@ describe("processInboundEmail", () => {
   });
 
   it("does not send anything to a customer who is already do-not-disturb", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
 
     const personId = await seedCustomer();
     await setCustomerEmailDnd(personId, true);
@@ -210,9 +210,9 @@ describe("processInboundEmail", () => {
   });
 
   it("does not send anything, but still persists the inbound message and flags for staff, when the guardrail rejects the turn", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
-    runLucyTurnMock.mockResolvedValueOnce({ ok: false, code: "UNSUPPORTED_PRICING_CLAIM" });
+    runChrisTurnMock.mockResolvedValueOnce({ ok: false, code: "UNSUPPORTED_PRICING_CLAIM" });
 
     const personId = await seedCustomer();
     const result = await processInboundEmail(personId, "discount?", "give me a discount", null);
@@ -224,10 +224,10 @@ describe("processInboundEmail", () => {
   });
 
   it("still sends email when the customer is only SMS do-not-disturb — the two channels are independent", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendEmailMock.mockClear();
     sendEmailMock.mockResolvedValueOnce({ messageId: "<sms-dnd-only@example.com>" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
 
     const personId = await seedCustomer();
     await setCustomerSmsDnd(personId, true);
@@ -262,7 +262,7 @@ describe("sendEmailStaffReply", () => {
     expect(subject).toBe("Re: Pricing question");
     expect(html).toContain("It's $180/month for the standard plan.");
     expect(html).toContain("Hi Email,");
-    expect(html).toContain("— Joy at Genesis Health");
+    expect(html).toContain("— Chris at Genesis Health");
     expect(opts.inReplyTo).toBe("<inbound-1@example.com>");
 
     const messages = await listEmailMessages(conversation.id);

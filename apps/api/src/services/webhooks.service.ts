@@ -300,7 +300,7 @@ export async function handleBaskOrderWebhook(payload: BaskOrderWebhookRequest): 
     await setCustomerSmsDnd(customerId, false);
     await setCustomerEmailDnd(customerId, false);
 
-    // Sarah's opening message fires the moment the order lands — instant,
+    // Mia's opening message fires the moment the order lands — instant,
     // same as the Meta lead opener, not a scheduled sweep. A genuine first
     // order gets the "doctor is reviewing it" welcome copy; re-sending that
     // same welcome to a recurring/refill order would read as broken, so it
@@ -425,7 +425,7 @@ export async function handleBaskQuestionnaireWebhook(payload: BaskQuestionnaireW
       })
       .returning({ id: questionnaireEventsTable.id });
 
-    // Arms the first Lucy SMS outreach 10 minutes from now, plus the
+    // Arms the first Chris SMS outreach 10 minutes from now, plus the
     // independent 4-step email nurture sequence (opener/urgency/educational/
     // plan_comparison — see abandoned-cart-email.service.ts). Both are
     // idempotent per questionnaire event, so a duplicate "abandoned"

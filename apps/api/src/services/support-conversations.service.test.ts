@@ -6,7 +6,7 @@ import {
   setSupportMessageSentiment,
   listSupportMessages,
   updateSupportConversationState,
-  toSarahPreviewBody,
+  toMiaPreviewBody,
   listSupportConversationSummaries,
   getSupportConversationDetail,
 } from "./support-conversations.service.js";
@@ -46,11 +46,11 @@ describe("appendSupportMessage / listSupportMessages", () => {
   it("appends messages in order and returns them oldest-first", async () => {
     const personId = await seedCustomer();
     const conversation = await getOrCreateSupportConversation(personId);
-    await appendSupportMessage(conversation.id, "outbound", "Hello, this is Sarah.");
+    await appendSupportMessage(conversation.id, "outbound", "Hello, this is Mia.");
     await appendSupportMessage(conversation.id, "inbound", "Has my order shipped?");
 
     const messages = await listSupportMessages(conversation.id);
-    expect(messages.map((m) => m.body)).toEqual(["Hello, this is Sarah.", "Has my order shipped?"]);
+    expect(messages.map((m) => m.body)).toEqual(["Hello, this is Mia.", "Has my order shipped?"]);
     expect(messages.map((m) => m.direction)).toEqual(["outbound", "inbound"]);
   });
 });
@@ -90,8 +90,8 @@ describe("updateSupportConversationState", () => {
   });
 });
 
-describe("toSarahPreviewBody", () => {
-  it("maps conversation order state and history into the shape runSarahTurn expects", async () => {
+describe("toMiaPreviewBody", () => {
+  it("maps conversation order state and history into the shape runMiaTurn expects", async () => {
     const personId = await seedCustomer();
     const conversation = await getOrCreateSupportConversation(personId);
     await updateSupportConversationState(conversation.id, {
@@ -104,7 +104,7 @@ describe("toSarahPreviewBody", () => {
     const updated = await getOrCreateSupportConversation(personId);
     const messages = await appendSupportMessage(conversation.id, "inbound", "thanks!").then(() => listSupportMessages(conversation.id));
 
-    const body = toSarahPreviewBody(updated, messages);
+    const body = toMiaPreviewBody(updated, messages);
     expect(body.orderState).toEqual({ prescriptionWritten: true, orderShipped: true, trackingNumber: "TRACK999", paymentFailed: false });
     expect(body.reviewRequested).toBe(true);
     expect(body.lastQuestion).toBe("Anything else?");

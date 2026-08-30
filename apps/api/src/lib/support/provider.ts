@@ -1,7 +1,7 @@
 /**
- * Provider for Sarah's post-purchase support conversation loop. Assembles
+ * Provider for Mia's post-purchase support conversation loop. Assembles
  * the system prompt and calls Claude with a forced tool call so the response
- * always matches SarahInteractiveSchema.
+ * always matches MiaInteractiveSchema.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * ISOLATION CONTRACT (same as apps/api/src/lib/messaging/provider.ts):
@@ -10,28 +10,28 @@
  *  • Never log the API key, system prompt content, or reply text.
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Model: claude-haiku-4-5-20251001 (fixed) — same reasoning as Lucy: this
+ * Model: claude-haiku-4-5-20251001 (fixed) — same reasoning as Chris: this
  * runs per patient message in a real-time SMS-style loop, so cost/latency
  * compound in a way they don't for a low-volume assistant.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import type { SarahInteractiveResult, SarahPreviewRequestBody } from "./types.js";
+import type { MiaInteractiveResult, MiaPreviewRequestBody } from "./types.js";
 import type { KnowledgeTopic } from "../messaging/knowledge-catalog.js";
 import { APPROVED_REVIEW_URLS, APPROVED_PORTAL_URL, APPROVED_REVIEW_WRITE_URL } from "../messaging/knowledge-catalog.js";
-import { SarahInteractiveSchema } from "./safety.js";
+import { MiaInteractiveSchema } from "./safety.js";
 
 const CALL_TIMEOUT_MS = 10_000;
 const MODEL = "claude-haiku-4-5-20251001";
 
-export class SarahProviderError extends Error {
+export class MiaProviderError extends Error {
   constructor(
     public readonly category: string,
     public readonly rawOutput: string = "",
     cause?: unknown,
   ) {
     super(category);
-    this.name = "SarahProviderError";
+    this.name = "MiaProviderError";
     if (cause !== undefined) this.cause = cause;
   }
 }
@@ -39,7 +39,7 @@ export class SarahProviderError extends Error {
 let cachedClient: Anthropic | null = null;
 function getClient(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) {
-    throw new SarahProviderError("PROVIDER_NOT_CONFIGURED");
+    throw new MiaProviderError("PROVIDER_NOT_CONFIGURED");
   }
   if (!cachedClient) cachedClient = new Anthropic();
   return cachedClient;
@@ -48,9 +48,9 @@ function getClient(): Anthropic {
 const MAX_TRANSCRIPT_MESSAGES = 20;
 const MAX_TRANSCRIPT_CHARS = 8_000;
 
-function buildTranscript(messages: SarahPreviewRequestBody["messages"]): string {
+function buildTranscript(messages: MiaPreviewRequestBody["messages"]): string {
   const capped = [...messages].slice(-MAX_TRANSCRIPT_MESSAGES);
-  const lines = capped.map((m) => `${m.direction === "inbound" ? "Patient" : "Sarah"}: ${m.body}`);
+  const lines = capped.map((m) => `${m.direction === "inbound" ? "Patient" : "Mia"}: ${m.body}`);
   let text = lines.join("\n");
   if (text.length > MAX_TRANSCRIPT_CHARS) {
     text = "...\n" + text.slice(-(MAX_TRANSCRIPT_CHARS - 4));
@@ -77,7 +77,7 @@ function buildKnowledgeSection(catalog: readonly KnowledgeTopic[]): string {
   return "\n" + lines.join("\n");
 }
 
-function buildSystemPrompt(body: SarahPreviewRequestBody, knowledgeCatalog: readonly KnowledgeTopic[]): string {
+function buildSystemPrompt(body: MiaPreviewRequestBody, knowledgeCatalog: readonly KnowledgeTopic[]): string {
   const o = body.orderState;
   const orderStateSummary = [
     `  prescriptionWritten: ${o.prescriptionWritten ? "yes" : "no"}`,
@@ -100,10 +100,10 @@ function buildSystemPrompt(body: SarahPreviewRequestBody, knowledgeCatalog: read
   const knowledgeSection = buildKnowledgeSection(knowledgeCatalog);
 
   return `\
-You are Lisa, an automated assistant on the doctor support / patient care side of Genesis Health.
+You are Mia, an automated assistant on the doctor support / patient care side of Genesis Health.
 You are already in an ongoing SMS text-message conversation with a patient who has already purchased.
 DO NOT re-introduce yourself. Never mention your own name again unless directly asked your identity.
-You are NOT Joy — Joy is sales outreach to prospects; you support existing patients after purchase.
+You are NOT Chris — Chris is sales outreach to prospects; you support existing patients after purchase.
 
 CURRENT ORDER STATE (ground truth — never guess, never contradict this):
 ${orderStateSummary}
@@ -157,7 +157,7 @@ nextQuestion exactly: "Is there something specific I can help you with?"
 Never claim to be a human, a doctor, a nurse, or any kind of medical provider.
 If the patient then insists on a human, use action "staff_review".
 ${knowledgeSection}
-APPROVED LINKS — Sarah may output these verbatim, and only these:
+APPROVED LINKS — Mia may output these verbatim, and only these:
  - Patient portal: ${APPROVED_PORTAL_URL}
  - No review links are available yet. If a patient asks to see or leave a review, thank them for asking and
    let them know there isn't a review link to share right now — do not invent one.
@@ -181,15 +181,15 @@ YOU MUST NOT:
  - Include any question mark in the reply text (questions go in nextQuestion only) — the one exception
    is the write-a-review link's own query-string "?", per REVIEW CHECK-IN and TWO-MESSAGE FORMAT above
 
-RESPONSE FORMAT — always use the sarah_reply tool.
+RESPONSE FORMAT — always use the mia_reply tool.
 nextQuestion rules:
  - action=reply: REQUIRED, must end with "?", exactly one "?"
  - action=pause, staff_review, no_reply: null`;
 }
 
-const SARAH_REPLY_TOOL = {
-  name: "sarah_reply",
-  description: "Return Sarah's structured reply to the patient's message.",
+const MIA_REPLY_TOOL = {
+  name: "mia_reply",
+  description: "Return Mia's structured reply to the patient's message.",
   input_schema: {
     type: "object" as const,
     properties: {
@@ -209,12 +209,12 @@ const SARAH_REPLY_TOOL = {
 
 /**
  * Call Claude with a 10-second timeout. Throws on timeout, network error, or
- * malformed response. Never retries (the caller, runSarahTurn, owns retries).
+ * malformed response. Never retries (the caller, runMiaTurn, owns retries).
  */
-export async function callSarahInteractive(
-  body: SarahPreviewRequestBody,
+export async function callMiaInteractive(
+  body: MiaPreviewRequestBody,
   knowledgeCatalog: readonly KnowledgeTopic[] = [],
-): Promise<SarahInteractiveResult> {
+): Promise<MiaInteractiveResult> {
   const client = getClient();
 
   const transcript = buildTranscript(body.messages);
@@ -224,12 +224,12 @@ export async function callSarahInteractive(
     model: MODEL,
     max_tokens: 500,
     system: systemPrompt,
-    tools: [SARAH_REPLY_TOOL],
-    tool_choice: { type: "tool", name: "sarah_reply" },
+    tools: [MIA_REPLY_TOOL],
+    tool_choice: { type: "tool", name: "mia_reply" },
     messages: [
       {
         role: "user",
-        content: `Conversation so far:\n${transcript}\n\nProvide your reply using the sarah_reply tool.`,
+        content: `Conversation so far:\n${transcript}\n\nProvide your reply using the mia_reply tool.`,
       },
     ],
   });
@@ -241,12 +241,12 @@ export async function callSarahInteractive(
     response = await Promise.race([createPromise, timeoutPromise]);
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "TIMEOUT") {
-      throw new SarahProviderError("PROVIDER_TIMEOUT");
+      throw new MiaProviderError("PROVIDER_TIMEOUT");
     }
-    throw new SarahProviderError("PROVIDER_HTTP_ERROR", "", err);
+    throw new MiaProviderError("PROVIDER_HTTP_ERROR", "", err);
   }
 
-  const toolBlock = response.content.find((b) => b.type === "tool_use" && b.name === "sarah_reply");
+  const toolBlock = response.content.find((b) => b.type === "tool_use" && b.name === "mia_reply");
   const textBlock = response.content.find((b) => b.type === "text");
   const rawText = textBlock && textBlock.type === "text" ? textBlock.text : "";
 
@@ -255,22 +255,22 @@ export async function callSarahInteractive(
     parsed = toolBlock.input;
   } else if (rawText) {
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new SarahProviderError("NO_JSON_OBJECT", rawText);
+    if (!jsonMatch) throw new MiaProviderError("NO_JSON_OBJECT", rawText);
     try {
       parsed = JSON.parse(jsonMatch[0]);
     } catch {
-      throw new SarahProviderError("JSON_PARSE_ERROR", jsonMatch[0]);
+      throw new MiaProviderError("JSON_PARSE_ERROR", jsonMatch[0]);
     }
   } else {
-    throw new SarahProviderError("EMPTY_RESPONSE", "");
+    throw new MiaProviderError("EMPTY_RESPONSE", "");
   }
 
-  let validated: ReturnType<typeof SarahInteractiveSchema.parse>;
+  let validated: ReturnType<typeof MiaInteractiveSchema.parse>;
   try {
-    validated = SarahInteractiveSchema.parse(parsed);
+    validated = MiaInteractiveSchema.parse(parsed);
   } catch {
     const rawForRepair = toolBlock && toolBlock.type === "tool_use" ? JSON.stringify(toolBlock.input) : rawText;
-    throw new SarahProviderError("SCHEMA_VALIDATION_ERROR", rawForRepair);
+    throw new MiaProviderError("SCHEMA_VALIDATION_ERROR", rawForRepair);
   }
 
   return {

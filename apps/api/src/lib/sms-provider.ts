@@ -30,7 +30,7 @@ export class SmsProviderNotConfiguredError extends Error {
  * (send_mode) the plain endpoint doesn't, but it requires an "AI Agent API"
  * account-level add-on to be separately enabled (Settings → Developer → AI
  * Agent tab) — confirmed against a real 403 agent_api_disabled response in
- * production 2026-08-20. Deliberately not enabling that add-on: Joy/Lisa's
+ * production 2026-08-20. Deliberately not enabling that add-on: Chris/Mia's
  * replies are already fully drafted by our own Claude integration before
  * this function is ever called, so there's nothing for iBluSend's AI
  * feature to add. /send-message has no pacing option, but every caller here

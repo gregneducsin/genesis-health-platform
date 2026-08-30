@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, customersTable, conversationsTable, objectionReengagementTriggersTable } from "@luma/db";
-import type { LucyTurnResult } from "./lucy-conversation.service.js";
+import type { ChrisTurnResult } from "./chris-conversation.service.js";
 import { isCustomerSmsDnd, setCustomerSmsDnd, setCustomerEmailDnd } from "./dnd.service.js";
 
-const runLucyTurnMock = vi.fn();
-vi.mock("./lucy-conversation.service.js", async () => {
-  const actual = await vi.importActual<typeof import("./lucy-conversation.service.js")>("./lucy-conversation.service.js");
-  return { ...actual, runLucyTurn: (...args: unknown[]) => runLucyTurnMock(...args) };
+const runChrisTurnMock = vi.fn();
+vi.mock("./chris-conversation.service.js", async () => {
+  const actual = await vi.importActual<typeof import("./chris-conversation.service.js")>("./chris-conversation.service.js");
+  return { ...actual, runChrisTurn: (...args: unknown[]) => runChrisTurnMock(...args) };
 });
 
 const sendMessageMock = vi.fn();
@@ -16,7 +16,7 @@ vi.mock("../lib/sms-provider.js", async () => {
   return { ...actual, getSmsProvider: () => ({ sendMessage: sendMessageMock }) };
 });
 
-const { processInboundMessage } = await import("./lucy-dispatch.service.js");
+const { processInboundMessage } = await import("./chris-dispatch.service.js");
 const { getOrCreateConversation, listMessages } = await import("./conversations.service.js");
 
 async function seedCustomer(opts: { phone?: string | null; firstName?: string } = {}): Promise<string> {
@@ -33,7 +33,7 @@ async function seedCustomer(opts: { phone?: string | null; firstName?: string } 
   return row.id;
 }
 
-function okResult(overrides: Partial<Extract<LucyTurnResult, { ok: true }>> = {}): LucyTurnResult {
+function okResult(overrides: Partial<Extract<ChrisTurnResult, { ok: true }>> = {}): ChrisTurnResult {
   return {
     ok: true,
     action: "reply",
@@ -57,10 +57,10 @@ function okResult(overrides: Partial<Extract<LucyTurnResult, { ok: true }>> = {}
 
 describe("processInboundMessage", () => {
   it("persists the inbound message, tags its sentiment, and sends+logs both reply and nextQuestion", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_1" }).mockResolvedValueOnce({ providerMessageId: "msg_2" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ inboundSentiment: "positive" }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ inboundSentiment: "positive" }));
 
     const personId = await seedCustomer();
     const result = await processInboundMessage(personId, "How much is semaglutide?");
@@ -83,10 +83,10 @@ describe("processInboundMessage", () => {
   });
 
   it("persists objectionKey alongside objectionStage", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_obj" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "price", objectionStage: 1 }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "price", objectionStage: 1 }));
 
     const personId = await seedCustomer();
     await processInboundMessage(personId, "still thinking about the cost");
@@ -98,10 +98,10 @@ describe("processInboundMessage", () => {
   });
 
   it("schedules a 2-week re-engagement text once think_about_it reaches stand-down", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_standdown" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "think_about_it", objectionStage: 2, nextQuestion: null }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "think_about_it", objectionStage: 2, nextQuestion: null }));
 
     const personId = await seedCustomer();
     await processInboundMessage(personId, "nah I don't think I'm ready");
@@ -112,44 +112,44 @@ describe("processInboundMessage", () => {
   });
 
   it("does NOT schedule a re-engagement text for a different objection reaching stage 2, or think_about_it at an earlier stage", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_other" });
 
     const otherObjectionPersonId = await seedCustomer();
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "price", objectionStage: 2, nextQuestion: null }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "price", objectionStage: 2, nextQuestion: null }));
     await processInboundMessage(otherObjectionPersonId, "no thanks");
     let triggers = await db.select().from(objectionReengagementTriggersTable).where(eq(objectionReengagementTriggersTable.personId, otherObjectionPersonId));
     expect(triggers).toHaveLength(0);
 
     const earlyStagePersonId = await seedCustomer();
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "think_about_it", objectionStage: 0 }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ objectionKey: "think_about_it", objectionStage: 0 }));
     await processInboundMessage(earlyStagePersonId, "let me think about it");
     triggers = await db.select().from(objectionReengagementTriggersTable).where(eq(objectionReengagementTriggersTable.personId, earlyStagePersonId));
     expect(triggers).toHaveLength(0);
   });
 
-  it("passes the customer's known first name to runLucyTurn, and null for the 'Unknown' placeholder", async () => {
-    runLucyTurnMock.mockClear();
+  it("passes the customer's known first name to runChrisTurn, and null for the 'Unknown' placeholder", async () => {
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_x" });
-    runLucyTurnMock.mockResolvedValue(okResult());
+    runChrisTurnMock.mockResolvedValue(okResult());
 
     const knownPersonId = await seedCustomer({ firstName: "Jordan" });
     await processInboundMessage(knownPersonId, "hi");
-    expect(runLucyTurnMock.mock.calls[0]![1].customerFirstName).toBe("Jordan");
+    expect(runChrisTurnMock.mock.calls[0]![1].customerFirstName).toBe("Jordan");
 
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     const unknownPersonId = await seedCustomer({ firstName: "Unknown" });
     await processInboundMessage(unknownPersonId, "hi");
-    expect(runLucyTurnMock.mock.calls[0]![1].customerFirstName).toBeNull();
+    expect(runChrisTurnMock.mock.calls[0]![1].customerFirstName).toBeNull();
   });
 
   it("writes a name learned mid-conversation to the customer record once it was previously unknown", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_x" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ learnedFirstName: "Jordan" }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ learnedFirstName: "Jordan" }));
 
     const personId = await seedCustomer({ firstName: "Unknown" });
     await processInboundMessage(personId, "It's Jordan");
@@ -158,11 +158,11 @@ describe("processInboundMessage", () => {
     expect(customer!.firstName).toBe("Jordan");
   });
 
-  it("does not overwrite an already-known first name, even if runLucyTurn reports one", async () => {
-    runLucyTurnMock.mockClear();
+  it("does not overwrite an already-known first name, even if runChrisTurn reports one", async () => {
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_x" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ learnedFirstName: "SomeoneElse" }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ learnedFirstName: "SomeoneElse" }));
 
     const personId = await seedCustomer({ firstName: "Jordan" });
     await processInboundMessage(personId, "hi");
@@ -172,10 +172,10 @@ describe("processInboundMessage", () => {
   });
 
   it("merges validatedSlotUpdates into conversation state and stores objectionStage/linkProvided/promoOffered", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_x" });
-    runLucyTurnMock.mockResolvedValueOnce(
+    runChrisTurnMock.mockResolvedValueOnce(
       okResult({ objectionStage: 1, linkProvided: true, promoOffered: true, validatedSlotUpdates: { selectedProduct: "tirzepatide" } }),
     );
 
@@ -191,10 +191,10 @@ describe("processInboundMessage", () => {
   });
 
   it("still logs the outbound message when the SMS send itself fails, but without a providerMessageId", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockRejectedValueOnce(new Error("No SMS provider is configured (SMS_PROVIDER is unset)."));
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ nextQuestion: null }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ nextQuestion: null }));
 
     const personId = await seedCustomer();
     const result = await processInboundMessage(personId, "tell me more");
@@ -208,9 +208,9 @@ describe("processInboundMessage", () => {
   });
 
   it("does not send anything, but still persists the inbound message, when the customer has no phone on file", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
 
     const personId = await seedCustomer({ phone: null });
     await processInboundMessage(personId, "hello");
@@ -222,9 +222,9 @@ describe("processInboundMessage", () => {
   });
 
   it("does not send or persist any outbound message when the guardrail rejects the turn, but flags the conversation for staff attention", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
-    runLucyTurnMock.mockResolvedValueOnce({ ok: false, code: "UNSUPPORTED_PRICING_CLAIM" });
+    runChrisTurnMock.mockResolvedValueOnce({ ok: false, code: "UNSUPPORTED_PRICING_CLAIM" });
 
     const personId = await seedCustomer();
     const result = await processInboundMessage(personId, "give me a discount");
@@ -238,10 +238,10 @@ describe("processInboundMessage", () => {
     expect(conversation.needsAttention).toBe(true);
   });
 
-  it("flags the conversation for staff attention and returns ok:false, instead of throwing, when runLucyTurn itself throws unexpectedly", async () => {
-    runLucyTurnMock.mockClear();
+  it("flags the conversation for staff attention and returns ok:false, instead of throwing, when runChrisTurn itself throws unexpectedly", async () => {
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
-    runLucyTurnMock.mockRejectedValueOnce(new Error("createIntakeLink: connection terminated unexpectedly"));
+    runChrisTurnMock.mockRejectedValueOnce(new Error("createIntakeLink: connection terminated unexpectedly"));
 
     const personId = await seedCustomer();
     const result = await processInboundMessage(personId, "yes send me the link");
@@ -256,9 +256,9 @@ describe("processInboundMessage", () => {
   });
 
   it("flags the conversation for staff attention when the model itself flags requiresStaff (e.g. action=staff_review)", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
-    runLucyTurnMock.mockResolvedValueOnce(
+    runChrisTurnMock.mockResolvedValueOnce(
       okResult({ action: "staff_review", reply: null, nextQuestion: null, requiresStaff: true, source: "pre_check_block" }),
     );
 
@@ -270,10 +270,10 @@ describe("processInboundMessage", () => {
   });
 
   it("does not flag the conversation when the turn is a normal, non-staff reply", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_ok" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ requiresStaff: false }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ requiresStaff: false }));
 
     const personId = await seedCustomer();
     await processInboundMessage(personId, "how much is semaglutide?");
@@ -283,12 +283,12 @@ describe("processInboundMessage", () => {
   });
 
   it("serializes two double-texted inbound messages instead of racing them", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_race" });
 
     const seenHistoryLengths: number[] = [];
-    runLucyTurnMock.mockImplementation(async (_personId: string, body: { messages: readonly unknown[] }) => {
+    runChrisTurnMock.mockImplementation(async (_personId: string, body: { messages: readonly unknown[] }) => {
       // Snapshot synchronously at call time — before any delay — so this
       // reflects exactly what conversation history was visible the instant
       // Claude was invoked for this turn.
@@ -327,10 +327,10 @@ describe("processInboundMessage", () => {
   });
 
   it("does not create a duplicate conversation across multiple inbound turns", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValue({ providerMessageId: "msg_y" });
-    runLucyTurnMock.mockResolvedValue(okResult());
+    runChrisTurnMock.mockResolvedValue(okResult());
 
     const personId = await seedCustomer();
     await processInboundMessage(personId, "first");
@@ -341,10 +341,10 @@ describe("processInboundMessage", () => {
   });
 
   it("sends the OPT_OUT confirmation reply, then marks the customer DND — the confirmation itself is not blocked", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_optout" });
-    runLucyTurnMock.mockResolvedValueOnce(
+    runChrisTurnMock.mockResolvedValueOnce(
       okResult({
         action: "pause",
         reply: "You've been unsubscribed and won't receive further messages. Reply HELP for help.",
@@ -366,9 +366,9 @@ describe("processInboundMessage", () => {
   });
 
   it("does not send anything to a customer who is already do-not-disturb", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
-    runLucyTurnMock.mockResolvedValueOnce(okResult());
+    runChrisTurnMock.mockResolvedValueOnce(okResult());
 
     const personId = await seedCustomer();
     await setCustomerSmsDnd(personId, true);
@@ -379,10 +379,10 @@ describe("processInboundMessage", () => {
   });
 
   it("still sends SMS when the customer is only email do-not-disturb — the two channels are independent", async () => {
-    runLucyTurnMock.mockClear();
+    runChrisTurnMock.mockClear();
     sendMessageMock.mockClear();
     sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_email_dnd_only" });
-    runLucyTurnMock.mockResolvedValueOnce(okResult({ nextQuestion: null }));
+    runChrisTurnMock.mockResolvedValueOnce(okResult({ nextQuestion: null }));
 
     const personId = await seedCustomer();
     await setCustomerEmailDnd(personId, true);

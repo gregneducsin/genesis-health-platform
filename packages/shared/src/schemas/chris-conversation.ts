@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-export const sendLucyTestMessageRequestSchema = z.object({
+export const sendChrisTestMessageRequestSchema = z.object({
   customerId: z.string().uuid(),
   message: z.string().min(1).max(2000),
 });
-export type SendLucyTestMessageRequest = z.infer<typeof sendLucyTestMessageRequestSchema>;
+export type SendChrisTestMessageRequest = z.infer<typeof sendChrisTestMessageRequestSchema>;
 
-export const lucyTurnResponseSchema = z.discriminatedUnion("ok", [
+export const chrisTurnResponseSchema = z.discriminatedUnion("ok", [
   z.object({
     ok: z.literal(true),
     action: z.string(),
@@ -23,4 +23,4 @@ export const lucyTurnResponseSchema = z.discriminatedUnion("ok", [
   }),
   z.object({ ok: z.literal(false), code: z.string() }),
 ]);
-export type LucyTurnResponse = z.infer<typeof lucyTurnResponseSchema>;
+export type ChrisTurnResponse = z.infer<typeof chrisTurnResponseSchema>;

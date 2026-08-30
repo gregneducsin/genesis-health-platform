@@ -144,7 +144,7 @@ export async function listEmailMessages(conversationId: string, limit = MAX_HIST
 }
 
 /**
- * Builds the shape runLucyTurn expects, same as conversations.service.ts's
+ * Builds the shape runChrisTurn expects, same as conversations.service.ts's
  * toBotPreviewBody — the pure conversation-guardrail logic doesn't know or
  * care which channel a turn came from, so an email turn feeds it exactly
  * the same body shape an SMS turn does. `body.body` here is the plain-text

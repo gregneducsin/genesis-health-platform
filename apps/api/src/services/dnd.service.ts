@@ -17,7 +17,7 @@ export async function isCustomerSmsDnd(personId: string): Promise<boolean> {
 /**
  * Sets or clears a customer's SMS do-not-disturb flag. Set true on an
  * inbound STOP/UNSUBSCRIBE (see the OPT_OUT pre-check code in
- * lucy-dispatch.service.ts and sarah-dispatch.service.ts); cleared
+ * chris-dispatch.service.ts and mia-dispatch.service.ts); cleared
  * automatically the moment the customer makes a purchase
  * (purchases.service.ts's createPurchase and webhooks.service.ts's
  * handleBaskOrderWebhook) — a purchase is treated as fresh consent to be
@@ -38,8 +38,8 @@ export async function isCustomerEmailDnd(personId: string): Promise<boolean> {
 
 /**
  * Sets or clears a customer's email do-not-disturb flag. Set true on an
- * inbound OPT_OUT pre-check code (lucy-email-dispatch.service.ts /
- * sarah-email-dispatch.service.ts) or the one-click unsubscribe link every
+ * inbound OPT_OUT pre-check code (chris-email-dispatch.service.ts /
+ * mia-email-dispatch.service.ts) or the one-click unsubscribe link every
  * automated email carries (email-unsubscribe.routes.ts); cleared
  * automatically on purchase, same reasoning as setCustomerSmsDnd.
  */

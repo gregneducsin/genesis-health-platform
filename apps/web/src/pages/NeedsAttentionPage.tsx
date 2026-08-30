@@ -16,10 +16,10 @@ function relativeTime(iso: string | null): string {
 }
 
 const CHANNEL_LABEL: Record<NeedsAttentionChannel, string> = { sms: "SMS", email: "Email" };
-const PERSONA_LABEL: Record<NeedsAttentionPersona, string> = { lucy: "Joy", sarah: "Lisa" };
+const PERSONA_LABEL: Record<NeedsAttentionPersona, string> = { chris: "Chris", mia: "Mia" };
 
 /** Where staff go for the full thread + reply box, once they've decided this item needs more than a glance. */
-const CHANNEL_PAGE: Record<NeedsAttentionPersona, string> = { lucy: "/conversations", sarah: "/support" };
+const CHANNEL_PAGE: Record<NeedsAttentionPersona, string> = { chris: "/conversations", mia: "/support" };
 
 function ItemMessages({ item }: { item: NeedsAttentionItem }) {
   const { data, isLoading } = useNeedsAttentionMessages(item.channel, item.persona, item.conversationId);
@@ -96,7 +96,7 @@ export function NeedsAttentionPage() {
         {data && <p className="text-sm text-gray-500">{data.items.length} flagged across SMS and email</p>}
       </div>
       <p className="text-xs text-gray-400">
-        Every conversation Joy or Lisa flagged for staff review — a safety-relevant reply, a rejected guardrail turn, or a failed link/send that
+        Every conversation Chris or Mia flagged for staff review — a safety-relevant reply, a rejected guardrail turn, or a failed link/send that
         needs a human follow-up — across both SMS and email, in one place. Click a row to preview recent messages; use the full conversation page to
         actually reply.
       </p>

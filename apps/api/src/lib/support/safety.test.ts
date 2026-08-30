@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { supportPreCheck, supportPostCheck } from "./safety.js";
 import { getTopicByKey } from "../messaging/knowledge-catalog.js";
-import type { SarahInteractiveResult } from "./types.js";
+import type { MiaInteractiveResult } from "./types.js";
 
-function reply(overrides: Partial<SarahInteractiveResult> = {}): SarahInteractiveResult {
+function reply(overrides: Partial<MiaInteractiveResult> = {}): MiaInteractiveResult {
   return {
     action: "reply",
     reply: "Your order has been received and is with the doctor for review.",
@@ -117,7 +117,7 @@ describe("supportPreCheck", () => {
   });
 });
 
-function check(raw: SarahInteractiveResult, lastDraft: string | null = null, permittedTopicKeys?: ReadonlySet<string>) {
+function check(raw: MiaInteractiveResult, lastDraft: string | null = null, permittedTopicKeys?: ReadonlySet<string>) {
   return permittedTopicKeys ? supportPostCheck(raw, lastDraft, permittedTopicKeys) : supportPostCheck(raw, lastDraft);
 }
 
@@ -169,7 +169,7 @@ describe("supportPostCheck", () => {
     expect(result).toEqual({ ok: false, code: "QUESTION_MARK_IN_REPLY" });
   });
 
-  it("rejects clinical language in Sarah's own reply, even mentioning a medication name", () => {
+  it("rejects clinical language in Mia's own reply, even mentioning a medication name", () => {
     const result = check(reply({ reply: "Your tirzepatide dose is being adjusted." }));
     expect(result).toEqual({ ok: false, code: "PROHIBITED_CLINICAL" });
   });

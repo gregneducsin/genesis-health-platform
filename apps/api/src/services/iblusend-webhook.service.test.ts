@@ -3,10 +3,10 @@ import { db, customersTable, conversationsTable, supportConversationsTable, webh
 import { eq } from "drizzle-orm";
 
 const processInboundMessageMock = vi.fn().mockResolvedValue({ ok: true });
-vi.mock("./lucy-dispatch.service.js", () => ({ processInboundMessage: processInboundMessageMock }));
+vi.mock("./chris-dispatch.service.js", () => ({ processInboundMessage: processInboundMessageMock }));
 
 const processInboundSupportMessageMock = vi.fn().mockResolvedValue({ ok: true });
-vi.mock("./sarah-dispatch.service.js", () => ({ processInboundSupportMessage: processInboundSupportMessageMock }));
+vi.mock("./mia-dispatch.service.js", () => ({ processInboundSupportMessage: processInboundSupportMessageMock }));
 
 const recordAndClassifyUnmatchedSmsMock = vi.fn().mockResolvedValue(undefined);
 vi.mock("./unmatched-inbound-sms.service.js", () => ({ recordAndClassifyUnmatchedSms: recordAndClassifyUnmatchedSmsMock }));
@@ -58,7 +58,7 @@ function envelope(overrides: { event?: string; eventId?: string; data?: Record<s
 }
 
 describe("handleIbluSendWebhook", () => {
-  it("routes to Lisa when a support conversation already exists for the customer", async () => {
+  it("routes to Mia when a support conversation already exists for the customer", async () => {
     processInboundMessageMock.mockClear();
     processInboundSupportMessageMock.mockClear();
 
@@ -73,7 +73,7 @@ describe("handleIbluSendWebhook", () => {
     expect(processInboundMessageMock).not.toHaveBeenCalled();
   });
 
-  it("routes to Joy when only a Joy conversation exists, no support conversation", async () => {
+  it("routes to Chris when only a Chris conversation exists, no support conversation", async () => {
     processInboundMessageMock.mockClear();
     processInboundSupportMessageMock.mockClear();
 
@@ -88,7 +88,7 @@ describe("handleIbluSendWebhook", () => {
     expect(processInboundSupportMessageMock).not.toHaveBeenCalled();
   });
 
-  it("prefers Lisa over Joy when both conversations exist", async () => {
+  it("prefers Mia over Chris when both conversations exist", async () => {
     processInboundMessageMock.mockClear();
     processInboundSupportMessageMock.mockClear();
 
@@ -142,7 +142,7 @@ describe("handleIbluSendWebhook", () => {
     expect(result).toEqual({ duplicate: false });
   });
 
-  it("routes to Joy for a known customer's first-ever text, with no prior Joy or Lisa conversation", async () => {
+  it("routes to Chris for a known customer's first-ever text, with no prior Chris or Mia conversation", async () => {
     processInboundMessageMock.mockClear();
     processInboundSupportMessageMock.mockClear();
 

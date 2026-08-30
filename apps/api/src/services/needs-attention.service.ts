@@ -11,20 +11,20 @@ import {
   supportEmailConversationsTable,
   supportEmailConversationMessagesTable,
 } from "@luma/db";
-import { clearNeedsAttention as clearLucySmsAttention } from "./conversations.service.js";
-import { clearSupportNeedsAttention as clearSarahSmsAttention } from "./support-conversations.service.js";
+import { clearNeedsAttention as clearChrisSmsAttention } from "./conversations.service.js";
+import { clearSupportNeedsAttention as clearMiaSmsAttention } from "./support-conversations.service.js";
 import { updateEmailConversationState } from "./email-conversations.service.js";
 import { updateSupportEmailConversationState } from "./support-email-conversations.service.js";
 
 /**
- * Unifies the 4 independent needsAttention flags (Lucy SMS, Sarah SMS, Lucy
- * email, Sarah email — each its own table, see the schema docstrings for why
+ * Unifies the 4 independent needsAttention flags (Chris SMS, Mia SMS, Chris
+ * email, Mia email — each its own table, see the schema docstrings for why
  * they're kept separate rather than a shared "channel" column) into one
  * cross-channel triage view for the dashboard. Nothing here changes how any
  * of the 4 flags get set — this only reads and clears them.
  */
 export type NeedsAttentionChannel = "sms" | "email";
-export type NeedsAttentionPersona = "lucy" | "sarah";
+export type NeedsAttentionPersona = "chris" | "mia";
 
 export interface NeedsAttentionItem {
   readonly conversationId: string;
@@ -38,7 +38,7 @@ export interface NeedsAttentionItem {
   readonly reason: string | null;
 }
 
-async function listLucySms(): Promise<NeedsAttentionItem[]> {
+async function listChrisSms(): Promise<NeedsAttentionItem[]> {
   const rows = await db
     .select({
       conversationId: conversationsTable.id,
@@ -52,10 +52,10 @@ async function listLucySms(): Promise<NeedsAttentionItem[]> {
     .from(conversationsTable)
     .innerJoin(customersTable, eq(customersTable.id, conversationsTable.personId))
     .where(eq(conversationsTable.needsAttention, true));
-  return rows.map((r) => ({ ...r, channel: "sms" as const, persona: "lucy" as const }));
+  return rows.map((r) => ({ ...r, channel: "sms" as const, persona: "chris" as const }));
 }
 
-async function listSarahSms(): Promise<NeedsAttentionItem[]> {
+async function listMiaSms(): Promise<NeedsAttentionItem[]> {
   const rows = await db
     .select({
       conversationId: supportConversationsTable.id,
@@ -69,10 +69,10 @@ async function listSarahSms(): Promise<NeedsAttentionItem[]> {
     .from(supportConversationsTable)
     .innerJoin(customersTable, eq(customersTable.id, supportConversationsTable.personId))
     .where(eq(supportConversationsTable.needsAttention, true));
-  return rows.map((r) => ({ ...r, channel: "sms" as const, persona: "sarah" as const }));
+  return rows.map((r) => ({ ...r, channel: "sms" as const, persona: "mia" as const }));
 }
 
-async function listLucyEmail(): Promise<NeedsAttentionItem[]> {
+async function listChrisEmail(): Promise<NeedsAttentionItem[]> {
   const rows = await db
     .select({
       conversationId: emailConversationsTable.id,
@@ -86,10 +86,10 @@ async function listLucyEmail(): Promise<NeedsAttentionItem[]> {
     .from(emailConversationsTable)
     .innerJoin(customersTable, eq(customersTable.id, emailConversationsTable.personId))
     .where(eq(emailConversationsTable.needsAttention, true));
-  return rows.map((r) => ({ ...r, channel: "email" as const, persona: "lucy" as const }));
+  return rows.map((r) => ({ ...r, channel: "email" as const, persona: "chris" as const }));
 }
 
-async function listSarahEmail(): Promise<NeedsAttentionItem[]> {
+async function listMiaEmail(): Promise<NeedsAttentionItem[]> {
   const rows = await db
     .select({
       conversationId: supportEmailConversationsTable.id,
@@ -103,13 +103,13 @@ async function listSarahEmail(): Promise<NeedsAttentionItem[]> {
     .from(supportEmailConversationsTable)
     .innerJoin(customersTable, eq(customersTable.id, supportEmailConversationsTable.personId))
     .where(eq(supportEmailConversationsTable.needsAttention, true));
-  return rows.map((r) => ({ ...r, channel: "email" as const, persona: "sarah" as const }));
+  return rows.map((r) => ({ ...r, channel: "email" as const, persona: "mia" as const }));
 }
 
 /** Every flagged conversation across all 4 channels, most recently active first (nulls — no messages yet — last). */
 export async function listNeedsAttention(): Promise<NeedsAttentionItem[]> {
-  const [lucySms, sarahSms, lucyEmail, sarahEmail] = await Promise.all([listLucySms(), listSarahSms(), listLucyEmail(), listSarahEmail()]);
-  return [...lucySms, ...sarahSms, ...lucyEmail, ...sarahEmail].sort((a, b) => {
+  const [chrisSms, miaSms, chrisEmail, miaEmail] = await Promise.all([listChrisSms(), listMiaSms(), listChrisEmail(), listMiaEmail()]);
+  return [...chrisSms, ...miaSms, ...chrisEmail, ...miaEmail].sort((a, b) => {
     if (a.lastMessageAt === null) return 1;
     if (b.lastMessageAt === null) return -1;
     return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
@@ -126,11 +126,11 @@ export interface NeedsAttentionMessage {
 
 /** Read-only recent history for a flagged item, for inline preview in the triage view — reuses the same tables the per-channel pages already read from. */
 export async function getNeedsAttentionMessages(channel: NeedsAttentionChannel, persona: NeedsAttentionPersona, conversationId: string): Promise<NeedsAttentionMessage[]> {
-  if (channel === "sms" && persona === "lucy") {
+  if (channel === "sms" && persona === "chris") {
     const rows = await db.select().from(conversationMessagesTable).where(eq(conversationMessagesTable.conversationId, conversationId)).orderBy(desc(conversationMessagesTable.createdAt)).limit(10);
     return rows.reverse().map((r) => ({ id: r.id, direction: r.direction, subject: null, body: r.body, createdAt: r.createdAt.toISOString() }));
   }
-  if (channel === "sms" && persona === "sarah") {
+  if (channel === "sms" && persona === "mia") {
     const rows = await db
       .select()
       .from(supportConversationMessagesTable)
@@ -139,7 +139,7 @@ export async function getNeedsAttentionMessages(channel: NeedsAttentionChannel, 
       .limit(10);
     return rows.reverse().map((r) => ({ id: r.id, direction: r.direction, subject: null, body: r.body, createdAt: r.createdAt.toISOString() }));
   }
-  if (channel === "email" && persona === "lucy") {
+  if (channel === "email" && persona === "chris") {
     const rows = await db
       .select()
       .from(emailConversationMessagesTable)
@@ -159,8 +159,8 @@ export async function getNeedsAttentionMessages(channel: NeedsAttentionChannel, 
 
 /** Dispatches to the right channel/persona's own clear-attention logic — same 4 underlying flags, just one entry point for the unified triage view. */
 export async function clearNeedsAttentionItem(channel: NeedsAttentionChannel, persona: NeedsAttentionPersona, conversationId: string): Promise<void> {
-  if (channel === "sms" && persona === "lucy") return clearLucySmsAttention(conversationId);
-  if (channel === "sms" && persona === "sarah") return clearSarahSmsAttention(conversationId);
-  if (channel === "email" && persona === "lucy") return updateEmailConversationState(conversationId, { needsAttention: false, needsAttentionReason: null });
+  if (channel === "sms" && persona === "chris") return clearChrisSmsAttention(conversationId);
+  if (channel === "sms" && persona === "mia") return clearMiaSmsAttention(conversationId);
+  if (channel === "email" && persona === "chris") return updateEmailConversationState(conversationId, { needsAttention: false, needsAttentionReason: null });
   return updateSupportEmailConversationState(conversationId, { needsAttention: false, needsAttentionReason: null });
 }

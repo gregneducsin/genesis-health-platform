@@ -185,7 +185,7 @@ export async function sweepAbandonedCartEmailTriggers(): Promise<AbandonedCartEm
 
     const emailConversation = await getOrCreateEmailConversation(trigger.personId);
     const result = await sendTriggerEmail({
-      persona: "lucy",
+      persona: "chris",
       personId: trigger.personId,
       conversationId: emailConversation.id,
       email: customer.email,

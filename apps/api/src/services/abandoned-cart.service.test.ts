@@ -117,7 +117,7 @@ describe("sweepAbandonedCartTriggers", () => {
     // same shape sendMetaLeadOpener creates (getOrCreateConversation with
     // leadSource "meta_form"), before the abandoned-cart opener ever fires.
     const existingConversation = await getOrCreateConversation(personId, "meta_form");
-    await appendMessage(existingConversation.id, "outbound", "Hey there, this is Joy with Genesis Health. I wanted to check what state you're in.", {});
+    await appendMessage(existingConversation.id, "outbound", "Hey there, this is Chris with Genesis Health. I wanted to check what state you're in.", {});
 
     const questionnaireEventId = await seedAbandonedQuestionnaire(personId);
     await scheduleAbandonedCartOpener(personId, questionnaireEventId);
@@ -126,7 +126,7 @@ describe("sweepAbandonedCartTriggers", () => {
     const result = await sweepAbandonedCartTriggers();
     expect(result.sentCount).toBe(1);
     expect(sendMessageMock).toHaveBeenCalledWith("+15559990000", expect.stringContaining("$20 off your first month"));
-    expect(sendMessageMock).toHaveBeenCalledWith("+15559990000", expect.not.stringContaining("this is Joy"));
+    expect(sendMessageMock).toHaveBeenCalledWith("+15559990000", expect.not.stringContaining("this is Chris"));
 
     // Lands in the SAME conversation, not a second one.
     const conversation = await getOrCreateConversation(personId);

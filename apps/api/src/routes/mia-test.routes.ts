@@ -1,24 +1,24 @@
 import { Router, type Router as RouterType } from "express";
-import { sendSarahTestMessageRequestSchema } from "@luma/shared";
-import { processInboundSupportMessage } from "../services/sarah-dispatch.service.js";
+import { sendMiaTestMessageRequestSchema } from "@luma/shared";
+import { processInboundSupportMessage } from "../services/mia-dispatch.service.js";
 import * as customersService from "../services/customers.service.js";
 import { requireRole } from "../middleware/requireAuth.js";
 import { requireCsrf } from "../middleware/csrf.js";
-import { createSarahTestLimiter } from "../middleware/rateLimit.js";
+import { createMiaTestLimiter } from "../middleware/rateLimit.js";
 
 /**
- * Internal test surface for Sarah's support conversation loop — same
- * reasoning as lucy-test.routes.ts: lets staff simulate an inbound patient
+ * Internal test surface for Mia's support conversation loop — same
+ * reasoning as chris-test.routes.ts: lets staff simulate an inbound patient
  * text and run it through the real pipeline without needing an actual SMS
  * provider yet.
  */
-export function createSarahTestRouter(): RouterType {
+export function createMiaTestRouter(): RouterType {
   const router: RouterType = Router();
-  const limiter = createSarahTestLimiter();
+  const limiter = createMiaTestLimiter();
 
   router.post("/message", limiter, requireRole("admin", "employee"), requireCsrf, async (req, res, next) => {
     try {
-      const parsed = sendSarahTestMessageRequestSchema.safeParse(req.body);
+      const parsed = sendMiaTestMessageRequestSchema.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Invalid request.", details: parsed.error.issues });
         return;
@@ -33,7 +33,7 @@ export function createSarahTestRouter(): RouterType {
       const result = await processInboundSupportMessage(customer.id, parsed.data.message);
 
       if (!result.ok && result.code === "PROVIDER_NOT_CONFIGURED") {
-        res.status(503).json({ error: "Sarah's conversation loop isn't configured yet." });
+        res.status(503).json({ error: "Mia's conversation loop isn't configured yet." });
         return;
       }
 

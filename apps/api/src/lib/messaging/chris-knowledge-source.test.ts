@@ -1,7 +1,7 @@
 /**
- * Lucy knowledge source — unit tests.
+ * Chris knowledge source — unit tests.
  *
- * LK-01  verifyLucySourceIntegrity() returns ok: true
+ * LK-01  verifyChrisSourceIntegrity() returns ok: true
  * LK-02  LF-normalised content hash matches recorded hash (hashesMatch)
  * LK-03  Byte count matches recorded value
  * LK-04  Line count matches recorded value (444)
@@ -11,13 +11,13 @@
  * LK-08  All 17 expected sections are present by name
  * LK-09  Semaglutide pricing values match Genesis Health's approved pricing
  * LK-10  Tirzepatide pricing values match Genesis Health's approved pricing
- * LK-11  Tirzepatide dose progression string matches the Lucy document
- * LK-12  Semaglutide dose progression string matches the Lucy document
+ * LK-11  Tirzepatide dose progression string matches the Chris document
+ * LK-12  Semaglutide dose progression string matches the Chris document
  * LK-13  Approved comparison language (tirzepatide > semaglutide) is in the catalog
  * LK-14  "provider_chooses_medication" is in product_comparison prohibited claims
- * LK-15  All Lucy-v1 topics have legalStatus "approved"
+ * LK-15  All Chris-v1 topics have legalStatus "approved"
  * LK-16  Metadata has correct version, status, source, approvedBy
- * LK-17  getPreviewEnabledTopics() includes all Lucy-v1 topic keys
+ * LK-17  getPreviewEnabledTopics() includes all Chris-v1 topic keys
  * LK-18  Medical boundary topics exist in the catalog (no-escalate & escalate entries)
  * LK-19  No invented prices in semaglutide_pricing approvedText
  * LK-20  No invented prices in tirzepatide_pricing approvedText
@@ -25,38 +25,38 @@
 
 import { describe, it, expect } from "vitest";
 import { createHash } from "node:crypto";
-import { LUCY_KNOWLEDGE_CONTENT, LUCY_KNOWLEDGE_META, LUCY_KNOWLEDGE_EXPECTED_SECTIONS, verifyLucySourceIntegrity } from "./lucy-knowledge-source.js";
-import { KNOWLEDGE_CATALOG, getPreviewEnabledTopics, getTopicByKey, LUCY_V1_TOPIC_KEYS } from "./knowledge-catalog.js";
+import { CHRIS_KNOWLEDGE_CONTENT, CHRIS_KNOWLEDGE_META, CHRIS_KNOWLEDGE_EXPECTED_SECTIONS, verifyChrisSourceIntegrity } from "./chris-knowledge-source.js";
+import { KNOWLEDGE_CATALOG, getPreviewEnabledTopics, getTopicByKey, CHRIS_V1_TOPIC_KEYS } from "./knowledge-catalog.js";
 
 // ── LK-01..LK-08: Source integrity ───────────────────────────────────────────
 
-describe("LK-01: verifyLucySourceIntegrity() returns ok", () => {
+describe("LK-01: verifyChrisSourceIntegrity() returns ok", () => {
   it("full integrity check passes with no discrepancies", () => {
-    const report = verifyLucySourceIntegrity();
+    const report = verifyChrisSourceIntegrity();
     expect(report.ok).toBe(true);
   });
 });
 
 describe("LK-02: LF-normalised content hash matches recorded hash", () => {
-  it("SHA-256 of stored content equals LUCY_KNOWLEDGE_META.contentHash", () => {
-    const report = verifyLucySourceIntegrity();
+  it("SHA-256 of stored content equals CHRIS_KNOWLEDGE_META.contentHash", () => {
+    const report = verifyChrisSourceIntegrity();
     expect(report.hashesMatch).toBe(true);
-    expect(report.storedHash).toBe(LUCY_KNOWLEDGE_META.contentHash);
+    expect(report.storedHash).toBe(CHRIS_KNOWLEDGE_META.contentHash);
   });
 
   it("recorded hash is distinct from the original CRLF file hash", () => {
-    expect(LUCY_KNOWLEDGE_META.contentHash).not.toBe(LUCY_KNOWLEDGE_META.originalFileHash);
+    expect(CHRIS_KNOWLEDGE_META.contentHash).not.toBe(CHRIS_KNOWLEDGE_META.originalFileHash);
   });
 
   it("sha256 can be independently verified", () => {
-    const computed = createHash("sha256").update(LUCY_KNOWLEDGE_CONTENT, "utf8").digest("hex");
+    const computed = createHash("sha256").update(CHRIS_KNOWLEDGE_CONTENT, "utf8").digest("hex");
     expect(computed).toBe("0384ed7b35bc0dd753100c90240d99e468684d60f2c32df6df10fa13ebe4b14e");
   });
 });
 
 describe("LK-03: byte count matches recorded value", () => {
-  it("UTF-8 byte length equals LUCY_KNOWLEDGE_META.byteCount (17126)", () => {
-    const report = verifyLucySourceIntegrity();
+  it("UTF-8 byte length equals CHRIS_KNOWLEDGE_META.byteCount (17126)", () => {
+    const report = verifyChrisSourceIntegrity();
     expect(report.byteCount).toBe(17126);
     expect(report.byteCountMatch).toBe(true);
   });
@@ -64,7 +64,7 @@ describe("LK-03: byte count matches recorded value", () => {
 
 describe("LK-04: line count matches recorded value", () => {
   it("trailing-newline-terminated line count equals 444", () => {
-    const report = verifyLucySourceIntegrity();
+    const report = verifyChrisSourceIntegrity();
     expect(report.lineCount).toBe(444);
     expect(report.lineCountMatch).toBe(true);
   });
@@ -72,7 +72,7 @@ describe("LK-04: line count matches recorded value", () => {
 
 describe("LK-05: section count matches recorded value", () => {
   it("number of top-level # sections equals 17", () => {
-    const report = verifyLucySourceIntegrity();
+    const report = verifyChrisSourceIntegrity();
     expect(report.sectionCount).toBe(17);
     expect(report.sectionCountMatch).toBe(true);
   });
@@ -80,7 +80,7 @@ describe("LK-05: section count matches recorded value", () => {
 
 describe("LK-06: no omitted sections", () => {
   it("every expected section name is present in the stored content", () => {
-    const report = verifyLucySourceIntegrity();
+    const report = verifyChrisSourceIntegrity();
     expect(report.omittedSections).toEqual([]);
     expect(report.noOmittedSections).toBe(true);
   });
@@ -88,23 +88,23 @@ describe("LK-06: no omitted sections", () => {
 
 describe("LK-07: no added sections", () => {
   it("no section names are present that were not in the original document", () => {
-    const report = verifyLucySourceIntegrity();
+    const report = verifyChrisSourceIntegrity();
     expect(report.addedSections).toEqual([]);
     expect(report.noAddedSections).toBe(true);
   });
 });
 
 describe("LK-08: all 17 expected section names are present", () => {
-  it.each(LUCY_KNOWLEDGE_EXPECTED_SECTIONS)("section '%s' is present in the stored content", (section) => {
-    expect(LUCY_KNOWLEDGE_CONTENT).toContain(`# ${section}`);
+  it.each(CHRIS_KNOWLEDGE_EXPECTED_SECTIONS)("section '%s' is present in the stored content", (section) => {
+    expect(CHRIS_KNOWLEDGE_CONTENT).toContain(`# ${section}`);
   });
 });
 
 // ── LK-09..LK-10: Exact pricing values ───────────────────────────────────────
 // Genesis Health's own pricing (owner-supplied 2026-08-17, from Genesis's
-// transparent-pricing page) — no longer the lucy-knowledge-v1 values, so
-// these check against Genesis's numbers instead of "matching the Lucy
-// document" (see LUCY_V1_TOPIC_KEYS's comment for why these two topics are
+// transparent-pricing page) — no longer the chris-knowledge-v1 values, so
+// these check against Genesis's numbers instead of "matching the Chris
+// document" (see CHRIS_V1_TOPIC_KEYS's comment for why these two topics are
 // exempt from the document-consistency checks elsewhere in this file).
 
 describe("LK-09: semaglutide pricing values match Genesis Health's approved pricing", () => {
@@ -118,24 +118,24 @@ describe("LK-09: semaglutide pricing values match Genesis Health's approved pric
     expect(topic?.approvedText).toContain("$175 per month");
   });
 
-  it("3-month price is $116.67 per month", () => {
-    expect(topic?.approvedText).toContain("$116.67 per month");
+  it("3-month price is $117 per month", () => {
+    expect(topic?.approvedText).toContain("$117 per month");
   });
 
   it("3-month total is $350", () => {
     expect(topic?.approvedText).toContain("$350 billed every 3 months");
   });
 
-  it("6-month price is $108.33 per month", () => {
-    expect(topic?.approvedText).toContain("$108.33 per month");
+  it("6-month price is $108 per month", () => {
+    expect(topic?.approvedText).toContain("$108 per month");
   });
 
   it("6-month total is $650", () => {
     expect(topic?.approvedText).toContain("$650 billed every 6 months");
   });
 
-  it("12-month price is $91.67 per month", () => {
-    expect(topic?.approvedText).toContain("$91.67 per month");
+  it("12-month price is $92 per month", () => {
+    expect(topic?.approvedText).toContain("$92 per month");
   });
 
   it("12-month total is $1,100", () => {
@@ -154,8 +154,8 @@ describe("LK-10: tirzepatide pricing values match Genesis Health's approved pric
     expect(topic?.approvedText).toContain("$225 per month");
   });
 
-  it("3-month price is $188.33 per month", () => {
-    expect(topic?.approvedText).toContain("$188.33 per month");
+  it("3-month price is $188 per month", () => {
+    expect(topic?.approvedText).toContain("$188 per month");
   });
 
   it("3-month total is $565", () => {
@@ -181,7 +181,7 @@ describe("LK-10: tirzepatide pricing values match Genesis Health's approved pric
 
 // ── LK-11..LK-12: Dose progressions ──────────────────────────────────────────
 
-describe("LK-11: tirzepatide dose progression matches the Lucy document", () => {
+describe("LK-11: tirzepatide dose progression matches the Chris document", () => {
   const topic = getTopicByKey("titration");
 
   it("topic exists in the catalog", () => {
@@ -206,7 +206,7 @@ describe("LK-11: tirzepatide dose progression matches the Lucy document", () => 
   });
 });
 
-describe("LK-12: semaglutide dose progression matches the Lucy document", () => {
+describe("LK-12: semaglutide dose progression matches the Chris document", () => {
   const topic = getTopicByKey("titration");
 
   it("contains the complete semaglutide dose progression", () => {
@@ -260,21 +260,21 @@ describe("LK-14: provider_chooses_medication is in product_comparison prohibited
   });
 });
 
-// ── LK-15: All Lucy-v1 topics have legalStatus "approved" ────────────────────
+// ── LK-15: All Chris-v1 topics have legalStatus "approved" ────────────────────
 
-describe("LK-15: all Lucy-v1 topics have legalStatus approved", () => {
-  it("every topic in LUCY_V1_TOPIC_KEYS has legalStatus 'approved'", () => {
-    for (const key of LUCY_V1_TOPIC_KEYS) {
+describe("LK-15: all Chris-v1 topics have legalStatus approved", () => {
+  it("every topic in CHRIS_V1_TOPIC_KEYS has legalStatus 'approved'", () => {
+    for (const key of CHRIS_V1_TOPIC_KEYS) {
       const topic = getTopicByKey(key);
       expect(topic, `topic ${key} should exist`).toBeDefined();
       expect(topic?.legalStatus, `topic ${key} legalStatus`).toBe("approved");
     }
   });
 
-  it("every topic in LUCY_V1_TOPIC_KEYS has lucySourceVersion 'lucy-knowledge-v1'", () => {
-    for (const key of LUCY_V1_TOPIC_KEYS) {
+  it("every topic in CHRIS_V1_TOPIC_KEYS has chrisSourceVersion 'chris-knowledge-v1'", () => {
+    for (const key of CHRIS_V1_TOPIC_KEYS) {
       const topic = getTopicByKey(key);
-      expect(topic?.lucySourceVersion, `topic ${key} lucySourceVersion`).toBe("lucy-knowledge-v1");
+      expect(topic?.chrisSourceVersion, `topic ${key} chrisSourceVersion`).toBe("chris-knowledge-v1");
     }
   });
 });
@@ -282,41 +282,41 @@ describe("LK-15: all Lucy-v1 topics have legalStatus approved", () => {
 // ── LK-16: Metadata is correct ───────────────────────────────────────────────
 
 describe("LK-16: metadata has correct version, status, source; approvedBy/approvedAt are null (not yet supplied)", () => {
-  it("version is lucy-knowledge-v1", () => {
-    expect(LUCY_KNOWLEDGE_META.version).toBe("lucy-knowledge-v1");
+  it("version is chris-knowledge-v1", () => {
+    expect(CHRIS_KNOWLEDGE_META.version).toBe("chris-knowledge-v1");
   });
 
   it("status is approved", () => {
-    expect(LUCY_KNOWLEDGE_META.status).toBe("approved");
+    expect(CHRIS_KNOWLEDGE_META.status).toBe("approved");
   });
 
   it("source is medical_staff_and_legal_approved", () => {
-    expect(LUCY_KNOWLEDGE_META.source).toBe("medical_staff_and_legal_approved");
+    expect(CHRIS_KNOWLEDGE_META.source).toBe("medical_staff_and_legal_approved");
   });
 
   it("approvedBy records owner attestation — not a named individual or invented value", () => {
-    expect(LUCY_KNOWLEDGE_META.approvedBy).toBe("owner_attested_medical_staff_and_legal_approved");
+    expect(CHRIS_KNOWLEDGE_META.approvedBy).toBe("owner_attested_medical_staff_and_legal_approved");
   });
 
   it("approvedAt is null — document owner has not yet supplied an approval date", () => {
-    expect(LUCY_KNOWLEDGE_META.approvedAt).toBeNull();
+    expect(CHRIS_KNOWLEDGE_META.approvedAt).toBeNull();
   });
 
   it("active is true", () => {
-    expect(LUCY_KNOWLEDGE_META.active).toBe(true);
+    expect(CHRIS_KNOWLEDGE_META.active).toBe(true);
   });
 
   it("sectionCount is 17", () => {
-    expect(LUCY_KNOWLEDGE_META.sectionCount).toBe(17);
+    expect(CHRIS_KNOWLEDGE_META.sectionCount).toBe(17);
   });
 });
 
-// ── LK-17: getPreviewEnabledTopics() includes all Lucy-v1 keys ───────────────
+// ── LK-17: getPreviewEnabledTopics() includes all Chris-v1 keys ───────────────
 
-describe("LK-17: getPreviewEnabledTopics() includes all Lucy-v1 topic keys and excludes non-Lucy entries", () => {
-  it("every LUCY_V1_TOPIC_KEY is in the preview-enabled set", () => {
+describe("LK-17: getPreviewEnabledTopics() includes all Chris-v1 topic keys and excludes non-Chris entries", () => {
+  it("every CHRIS_V1_TOPIC_KEY is in the preview-enabled set", () => {
     const enabledKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
-    for (const key of LUCY_V1_TOPIC_KEYS) {
+    for (const key of CHRIS_V1_TOPIC_KEYS) {
       expect(enabledKeys.has(key), `${key} should be preview-enabled`).toBe(true);
     }
   });
@@ -325,7 +325,7 @@ describe("LK-17: getPreviewEnabledTopics() includes all Lucy-v1 topic keys and e
     expect(getPreviewEnabledTopics().length).toBeGreaterThanOrEqual(8);
   });
 
-  it("first_month_offer IS preview-enabled — approved via lucy-promotion-v1", () => {
+  it("first_month_offer IS preview-enabled — approved via chris-promotion-v1", () => {
     const enabledKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
     expect(enabledKeys.has("first_month_offer")).toBe(true);
   });
@@ -335,17 +335,17 @@ describe("LK-17: getPreviewEnabledTopics() includes all Lucy-v1 topic keys and e
     expect(enabledKeys.has("plan_inclusions")).toBe(true);
   });
 
-  it("portal_help is NOT in Lucy's topic list — it's Sarah-only (a prospect has no portal account)", () => {
+  it("portal_help is NOT in Chris's topic list — it's Mia-only (a prospect has no portal account)", () => {
     const enabledKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
     expect(enabledKeys.has("portal_help")).toBe(false);
   });
 
-  it("first_month_offer is in the catalog and is preview-enabled (lucy-promotion-v1)", () => {
+  it("first_month_offer is in the catalog and is preview-enabled (chris-promotion-v1)", () => {
     const topic = getTopicByKey("first_month_offer");
     expect(topic).toBeDefined();
     expect(topic?.enabledForPreview).toBe(true);
     expect(topic?.legalStatus).toBe("approved");
-    expect(topic?.lucySourceVersion).toBe("lucy-promotion-v1");
+    expect(topic?.chrisSourceVersion).toBe("chris-promotion-v1");
   });
 
   it("plan_inclusions exists in the catalog and is preview-enabled", () => {

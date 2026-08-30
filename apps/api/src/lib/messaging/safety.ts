@@ -201,8 +201,8 @@ const LEGAL_SUE_RE = /\bsu(?:e|es|ed|ing)\b/i;
  * Claude never got the chance to use it. Deliberately narrow (get/receive/
  * arrive/ship verbs only) so it doesn't also catch a drug-efficacy-onset
  * question like "how long until my medication starts working" — that stays
- * blocked here on purpose: medication_onset_timeline is a Sarah-only topic
- * (an existing-patient question, not a lead's), so Lucy has no approved
+ * blocked here on purpose: medication_onset_timeline is a Mia-only topic
+ * (an existing-patient question, not a lead's), so Chris has no approved
  * answer to hand it to and should keep routing it to staff.
  */
 const SHIPPING_TIMING_PHRASES_LOWER = [
@@ -232,7 +232,7 @@ const SHIPPING_TIMING_PHRASES_LOWER = [
   // just asked with "when" instead of "how long." Same narrow "I get/receive
   // my" framing (not "my medication starts working") so an efficacy/onset
   // question stays routed to MEDICAL_CONTENT as before — see the file-level
-  // reasoning above about medication_onset_timeline being Sarah-only.
+  // reasoning above about medication_onset_timeline being Mia-only.
   "when will i get my",
   "when do i get my",
   "when am i getting my",
@@ -248,7 +248,7 @@ const SHIPPING_TIMING_PHRASES_LOWER = [
  * reason: how_luma_works's own approved text already says "the prescription
  * request is processed..." and "the prescription proceeds through the
  * program," and product_comparison's already says "we offer two weight-loss
- * treatment options" — both words are already freely used in Lucy's own
+ * treatment options" — both words are already freely used in Chris's own
  * approved content, so blocking a customer for merely asking about either
  * word prevented Claude from using content it was already allowed to give.
  * Deliberately narrow (process/options framing only) so a genuinely
@@ -376,7 +376,7 @@ export type InteractivePreCheckResult = { readonly blocked: false } | { readonly
  * Opt-out (code "OPT_OUT") takes the highest priority and is terminal —
  * no objection handling, no rebuttal, no provider call.
  *
- * `ourLastQuestion` (optional) is whatever Lucy herself last asked, if
+ * `ourLastQuestion` (optional) is whatever Chris herself last asked, if
  * anything — see the MEDICAL_WORDS_LOWER check below for the one place it's
  * used: telling apart an unprompted medical statement from a short reply
  * that's just naming which of our own topics the customer wants.
@@ -434,7 +434,7 @@ export function interactivePreCheck(lastInbound: string, ourLastQuestion: string
     return { blocked: false };
   }
   if (MEDICAL_WORDS_LOWER.some((w) => lower.includes(w))) {
-    // A real production case: Lucy asked an open clarifying question ("is
+    // A real production case: Chris asked an open clarifying question ("is
     // there something specific about the process you'd like me to go
     // over?"), the customer answered "Medication and plans" — just naming
     // one of our own topics, not raising an unprompted medical concern —
@@ -484,13 +484,13 @@ function normalizeUrlForComparison(url: string): string {
 const APPROVED_REVIEW_URLS_NORMALIZED = new Set([...APPROVED_REVIEW_URLS].map(normalizeUrlForComparison));
 
 /**
- * Clinical content ALWAYS rejected, regardless of which Lucy knowledge topics
+ * Clinical content ALWAYS rejected, regardless of which Chris knowledge topics
  * were declared in knowledgeTopicsUsed. These patterns describe individualized
  * medical actions or conditions that Claude must never perform or assert — even
- * when grounded in a Lucy topic — because they cross from general educational
+ * when grounded in a Chris topic — because they cross from general educational
  * information into individualized clinical judgment.
  *
- * "symptom" is included here because it does not appear in any Lucy approved
+ * "symptom" is included here because it does not appear in any Chris approved
  * text and its presence in a reply strongly signals individualized assessment.
  */
 // contraindicat(e|ed|es|ing|ion|ions) — was verb-only (contraindicated?), missing the noun form "contraindication(s)".
@@ -499,7 +499,7 @@ const UNCONDITIONAL_CLINICAL_RE = [/\bdiagnos(e|is|ed|ing)\b/i, /\bcontraindicat
 /**
  * Topic-specific language rules.
  *
- * Each entry pairs a sensitive-language pattern with the set of Lucy topic keys
+ * Each entry pairs a sensitive-language pattern with the set of Chris topic keys
  * that MUST be declared in knowledgeTopicsUsed for the pattern to be permitted.
  * If none of the required topics is declared, the reply is rejected with `code`.
  *
@@ -635,7 +635,7 @@ const INSURANCE_ACCEPTANCE_NEGATION_RE =
   /\b(don't|do\s+not|doesn't|does\s+not|didn't|did\s+not|won't|will\s+not|can't|cannot|could\s+not|may\s+not|might\s+not|isn't|is\s+not|aren't|are\s+not|wasn't|was\s+not|weren't|were\s+not|never|not)\b/;
 
 /**
- * Insurance mention — permitted when the insurance_payment Lucy topic is
+ * Insurance mention — permitted when the insurance_payment Chris topic is
  * declared in knowledgeTopicsUsed, e.g.
  *   "We don't accept insurance, but payment options are available through …"
  * Blocked (UNSUPPORTED_PRICING_CLAIM) when no insurance_payment topic is declared.
@@ -644,13 +644,14 @@ const INSURANCE_MENTION_RE = /\binsur(e|ance)\b/i;
 
 /**
  * Dollar-amount pattern — only blocked when no approved pricing topic is used.
- * Handles cents (e.g. "$116.67") and comma thousands-separators (e.g.
- * "$1,100") — Genesis Health's plan prices use both, unlike Luma's original
- * whole-dollar-only pricing, so a plain /\$\d+/ would either truncate a
- * decimal price at the "." or truncate a 4-digit price at the first comma.
+ * Comma thousands-separators supported (e.g. "$1,100") since some totals are
+ * 4 digits; no decimal/cents support — all approved prices are whole dollars
+ * (the "per month" figures used to show cents as an artifact of dividing a
+ * whole-dollar total by the plan length; those are now rounded to the
+ * nearest whole dollar for display, see knowledge-catalog.ts).
  */
-const DOLLAR_AMOUNT_RE = /\$\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/;
-const DOLLAR_AMOUNT_GLOBAL_RE = /\$(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)/g;
+const DOLLAR_AMOUNT_RE = /\$\d{1,3}(?:,\d{3})*/;
+const DOLLAR_AMOUNT_GLOBAL_RE = /\$(\d{1,3}(?:,\d{3})*)/g;
 
 /** Strips comma thousands-separators so "$1,100" and "$1100" compare equal. */
 function normalizeDollarAmount(raw: string): string {
@@ -672,9 +673,9 @@ function normalizeDollarAmount(raw: string): string {
 const APPROVED_DOLLAR_AMOUNTS = new Set([
   "20", // promo discount amount
   // semaglutide: month-to-month, 3/6/12-month monthly + total + save
-  "175", "116.67", "350", "108.33", "650", "400", "91.67", "1100", "1000",
+  "175", "117", "350", "108", "650", "400", "92", "1100", "1000",
   // tirzepatide: month-to-month, 3/6/12-month monthly + total + save
-  "225", "188.33", "565", "110", "1050", "300", "125", "1500", "1200",
+  "225", "188", "565", "110", "1050", "300", "125", "1500", "1200",
   // promo-adjusted month-to-month prices (promoState in provider.ts)
   "155", "205",
 ]);
@@ -888,7 +889,7 @@ export function interactivePostCheck(
       return { ok: false, code: "PROHIBITED_CLINICAL" };
     }
 
-    // Topic-specific language: each pattern requires its designated Lucy topic(s).
+    // Topic-specific language: each pattern requires its designated Chris topic(s).
     // A reply is rejected if it uses sensitive language without declaring the
     // specific topic that authorises that language. Declaring an unrelated topic
     // does not unlock permission for a different topic's sensitive vocabulary.

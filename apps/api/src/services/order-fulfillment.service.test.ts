@@ -42,7 +42,7 @@ describe("sendOrderReceivedOpener", () => {
     const personId = await seedCustomer();
     await sendOrderReceivedOpener(personId);
 
-    expect(sendMessageMock).toHaveBeenCalledWith("+15559991111", expect.stringContaining("this is Lisa"));
+    expect(sendMessageMock).toHaveBeenCalledWith("+15559991111", expect.stringContaining("this is Mia"));
     const conversation = await getOrCreateSupportConversation(personId);
     const messages = await listSupportMessages(conversation.id);
     expect(messages.length).toBe(1);

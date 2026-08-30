@@ -2,11 +2,11 @@ import { Router, type Router as RouterType } from "express";
 import { sendSupportConversationReplyRequestSchema } from "@luma/shared";
 import * as supportConversationsService from "../services/support-conversations.service.js";
 import * as supportEmailConversationsService from "../services/support-email-conversations.service.js";
-import { sendEmailStaffReply } from "../services/sarah-email-dispatch.service.js";
+import { sendEmailStaffReply } from "../services/mia-email-dispatch.service.js";
 import { requireRole } from "../middleware/requireAuth.js";
 import { requireCsrf } from "../middleware/csrf.js";
 
-/** SMS or email — same customer, same Sarah pipeline, two independent threads. Defaults to "sms" so every pre-existing caller of this router keeps its current behavior untouched. */
+/** SMS or email — same customer, same Mia pipeline, two independent threads. Defaults to "sms" so every pre-existing caller of this router keeps its current behavior untouched. */
 function channelFromQuery(req: { query: { channel?: unknown } }): "sms" | "email" {
   return req.query.channel === "email" ? "email" : "sms";
 }

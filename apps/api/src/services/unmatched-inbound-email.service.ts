@@ -9,7 +9,7 @@ import {
   type UnmatchedEmailMessage,
 } from "@luma/db";
 import { getEmailProvider } from "../lib/email-provider.js";
-import { processInboundEmail } from "./lucy-email-dispatch.service.js";
+import { processInboundEmail } from "./chris-email-dispatch.service.js";
 import { getOrCreateEmailConversation, appendEmailMessage } from "./email-conversations.service.js";
 import { normalizePhone } from "../lib/phone.js";
 import { logger } from "../lib/logger.js";
@@ -52,7 +52,7 @@ import { notifySlack } from "../lib/slack.js";
  * not "add a new row for someone new."
  *
  * The moment a lead is created, the triggering message itself is handed
- * off to Lucy's real, guardrailed pipeline (lucy-email-dispatch.service.ts's
+ * off to Chris's real, guardrailed pipeline (chris-email-dispatch.service.ts's
  * processInboundEmail) as a Meta-lead-style conversation, instead of
  * sitting in this queue with a generic draft — being confident enough to
  * create the lead means being confident enough to let the same pipeline
@@ -341,7 +341,7 @@ async function sendEmailAndLog(
 
   let messageId: string | null = null;
   try {
-    const { provider } = getEmailProvider("lucy");
+    const { provider } = getEmailProvider("chris");
     const html = wrapReplyHtml(body);
     const result = await provider.sendEmail(fromAddress, replySubject, html, {
       fromName: "Genesis Health Team",
@@ -452,8 +452,8 @@ export async function recordAndClassifyUnmatchedEmail(input: {
   let autoSent = false;
   if (leadResult?.justCreated) {
     // Confident enough to create the lead means confident enough to hand
-    // THIS message straight to Lucy's real, guardrailed pipeline — not the
-    // generic staff queue. Same trust level Lucy already operates at
+    // THIS message straight to Chris's real, guardrailed pipeline — not the
+    // generic staff queue. Same trust level Chris already operates at
     // unattended for every other lead; sending the generic acknowledgment
     // on top would just be a redundant second email. Treated as a Meta
     // lead-gen contact (state/currentlyTaking/product first, then
@@ -461,8 +461,8 @@ export async function recordAndClassifyUnmatchedEmail(input: {
     // started a Bask questionnaire, they're cold inbound outreach, exactly
     // like a Meta lead.
     try {
-      // Seed the new Lucy conversation with everything said in this thread
-      // before this final triggering message — without it, Lucy starts
+      // Seed the new Chris conversation with everything said in this thread
+      // before this final triggering message — without it, Chris starts
       // from nothing but a bare final message with no context for what
       // this person already asked about or said, which can leave her with
       // nothing coherent to react to (confirmed against a real case of
@@ -473,13 +473,13 @@ export async function recordAndClassifyUnmatchedEmail(input: {
       }
       await processInboundEmail(leadResult.customerId, input.subject, input.body, input.messageId, "meta_form", thread.receivingAddress ?? undefined);
     } catch (err) {
-      logger.warn({ threadId: thread.id, reason: err instanceof Error ? err.message : String(err) }, "handoff to Lucy after lead creation failed");
+      logger.warn({ threadId: thread.id, reason: err instanceof Error ? err.message : String(err) }, "handoff to Chris after lead creation failed");
     }
   } else if (isFirstMessage && classification?.intent !== "spam_or_irrelevant") {
     // One immediate, fixed, content-free acknowledgment per thread — see
     // sendAutoAcknowledgment's docstring. Only on the thread's first-ever
     // message, so a repeat sender doesn't get re-acknowledged on every
-    // email; skipped above when Lucy is about to send the real thing
+    // email; skipped above when Chris is about to send the real thing
     // instead. Also skipped for spam/irrelevant — replying to an automated
     // bounce notice or a spam sender wastes a send at best, and at worst
     // signals to a real spammer that this address is live and reads its
@@ -621,7 +621,7 @@ export async function sendUnmatchedInboundEmailReply(id: string, body: string): 
 
   let messageId: string | null = null;
   try {
-    const { provider } = getEmailProvider("lucy");
+    const { provider } = getEmailProvider("chris");
     const html = wrapReplyHtml(body);
     const result = await provider.sendEmail(thread.fromAddress, subject, html, {
       fromName: "Genesis Health Team",

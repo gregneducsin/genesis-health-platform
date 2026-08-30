@@ -3,9 +3,9 @@ import { customersTable } from "./customers";
 import { questionnaireEventsTable } from "./webhooks";
 
 /**
- * Email twin of conversationsTable (messaging.ts) — one Joy email thread per
+ * Email twin of conversationsTable (messaging.ts) — one Chris email thread per
  * customer (1:1), same slot/state shape, same guardrail pipeline
- * (runLucyTurn is channel-agnostic and is reused unchanged for email turns).
+ * (runChrisTurn is channel-agnostic and is reused unchanged for email turns).
  * Kept as its own table rather than adding a "channel" column to
  * conversationsTable: lower risk, ships without touching the SMS schema or
  * any of the routes/tests that assume one SMS conversation per person today.
@@ -41,7 +41,7 @@ export const emailConversationsTable = pgTable(
     /**
      * Which real mailbox (e.g. help@ vs support@) this customer's most
      * recent inbound email arrived at, when more than one is polled (see
-     * EMAIL_INBOUND_EXTRA_MAILBOXES) — Joy's replies send from this exact
+     * EMAIL_INBOUND_EXTRA_MAILBOXES) — Chris's replies send from this exact
      * address instead of always one fixed mailbox, so a customer who wrote
      * to help@ keeps hearing back from help@, not a different address than
      * the one they actually used. Null until their first inbound email; a
@@ -80,7 +80,7 @@ export const emailConversationMessagesTable = pgTable(
     sentiment: text("sentiment", { enum: ["positive", "neutral", "negative"] }),
     messageId: text("message_id"),
     inReplyTo: text("in_reply_to"),
-    /** Who actually wrote an outbound message — Joy (or an automated trigger) vs a staff member typing into the reply box. Null on inbound (always the customer). */
+    /** Who actually wrote an outbound message — Chris (or an automated trigger) vs a staff member typing into the reply box. Null on inbound (always the customer). */
     sentBy: text("sent_by", { enum: ["ai", "staff"] }),
     /** Which staff member actually sent it — set only when sentBy is "staff". Denormalized (not an FK), same convention as customer_notes.authorEmail, so history reads correctly even if the account is later renamed/disabled. */
     sentByStaffEmail: text("sent_by_staff_email"),
@@ -89,7 +89,7 @@ export const emailConversationMessagesTable = pgTable(
   (t) => [index("email_conversation_messages_conversation_id_idx").on(t.conversationId, t.createdAt)],
 );
 
-/** Email twin of supportConversationsTable (support.ts) — one Lisa email thread per customer (1:1). */
+/** Email twin of supportConversationsTable (support.ts) — one Mia email thread per customer (1:1). */
 export const supportEmailConversationsTable = pgTable(
   "support_email_conversations",
   {
@@ -113,7 +113,7 @@ export const supportEmailConversationsTable = pgTable(
     needsAttention: boolean("needs_attention").notNull().default(false),
     /** Human-readable explanation of why needsAttention is true — see lib/messaging/needs-attention-reason.ts. Null whenever needsAttention is false. */
     needsAttentionReason: text("needs_attention_reason"),
-    /** Lisa's twin of emailConversationsTable.receivingAddress — see its docstring. */
+    /** Mia's twin of emailConversationsTable.receivingAddress — see its docstring. */
     receivingAddress: text("receiving_address"),
     status: text("status", { enum: ["active", "closed"] }).notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -139,7 +139,7 @@ export const supportEmailConversationMessagesTable = pgTable(
     sentiment: text("sentiment", { enum: ["positive", "neutral", "negative"] }),
     messageId: text("message_id"),
     inReplyTo: text("in_reply_to"),
-    /** Who actually wrote an outbound message — Lisa (or an automated trigger) vs a staff member typing into the reply box. Null on inbound (always the customer). */
+    /** Who actually wrote an outbound message — Mia (or an automated trigger) vs a staff member typing into the reply box. Null on inbound (always the customer). */
     sentBy: text("sent_by", { enum: ["ai", "staff"] }),
     /** Which staff member actually sent it — set only when sentBy is "staff". Denormalized (not an FK), same convention as customer_notes.authorEmail, so history reads correctly even if the account is later renamed/disabled. */
     sentByStaffEmail: text("sent_by_staff_email"),

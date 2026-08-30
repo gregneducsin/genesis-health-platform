@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, customersTable } from "@luma/db";
-import { runLucyTurn, type LucyTurnResult } from "./lucy-conversation.service.js";
+import { runChrisTurn, type ChrisTurnResult } from "./chris-conversation.service.js";
 import {
   getOrCreateEmailConversation,
   getEmailConversationDetail,
@@ -29,7 +29,7 @@ function replySubject(originalSubject: string): string {
   return /^re:/i.test(originalSubject.trim()) ? originalSubject : `Re: ${originalSubject}`;
 }
 
-const SIGN_OFF = "Joy at Genesis Health";
+const SIGN_OFF = "Chris at Genesis Health";
 
 /**
  * Unlike a text, an email reads as unfinished without a sign-off — Claude
@@ -56,7 +56,7 @@ function withGreetingAndSignOff(firstName: string, bodyText: string): string {
 /**
  * Sends a threaded reply email and logs it in the email conversation
  * regardless of whether the send succeeds — same fail-soft reasoning as
- * lucy-dispatch.service.ts's sendAndLog. DND is checked here, not earlier
+ * chris-dispatch.service.ts's sendAndLog. DND is checked here, not earlier
  * in the pipeline, for the identical reason documented there: an OPT_OUT
  * confirmation reply must still go out before the flag it's about to set
  * would otherwise block it.
@@ -72,14 +72,14 @@ async function sendAndLog(
   fromEmailOverride: string | null,
 ): Promise<void> {
   if (await isCustomerEmailDnd(personId)) {
-    logger.warn({ personId, conversationId }, "outbound Lucy email not sent: customer is do-not-disturb");
+    logger.warn({ personId, conversationId }, "outbound Chris email not sent: customer is do-not-disturb");
     return;
   }
 
   const signedBody = withGreetingAndSignOff(firstName, bodyText);
   let messageId: string | null = null;
   try {
-    const { provider, fromName } = getEmailProvider("lucy");
+    const { provider, fromName } = getEmailProvider("chris");
     const unsubscribeUrl = buildUnsubscribeUrl(personId);
     const html = renderConversationReplyEmail(signedBody, unsubscribeUrl);
     const result = await provider.sendEmail(email, subject, html, {
@@ -91,14 +91,14 @@ async function sendAndLog(
     });
     messageId = result.messageId;
   } catch (err) {
-    logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "outbound Lucy email send failed");
+    logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "outbound Chris email send failed");
   }
   await appendEmailMessage(conversationId, "outbound", subject, signedBody, { messageId, inReplyTo });
 }
 
 /**
- * Email twin of lucy-dispatch.service.ts's processInboundMessage — same
- * guardrail pipeline (runLucyTurn, unchanged), same withPersonLock
+ * Email twin of chris-dispatch.service.ts's processInboundMessage — same
+ * guardrail pipeline (runChrisTurn, unchanged), same withPersonLock
  * serialization reasoning, its own email conversation table. The one real
  * adaptation for the channel: SMS sends reply and nextQuestion as two
  * separate texts; email combines them into one message body, since a
@@ -112,7 +112,7 @@ export async function processInboundEmail(
   messageId: string | null,
   initialLeadSource?: "abandoned_cart" | "meta_form",
   receivingAddress?: string,
-): Promise<LucyTurnResult> {
+): Promise<ChrisTurnResult> {
   return withPersonLock(personId, () => processInboundEmailLocked(personId, subject, bodyText, messageId, initialLeadSource, receivingAddress));
 }
 
@@ -123,7 +123,7 @@ async function processInboundEmailLocked(
   messageId: string | null,
   initialLeadSource?: "abandoned_cart" | "meta_form",
   receivingAddress?: string,
-): Promise<LucyTurnResult> {
+): Promise<ChrisTurnResult> {
   const conversation = await getOrCreateEmailConversation(personId, initialLeadSource, receivingAddress);
   const priorMessages = await listEmailMessages(conversation.id);
   const inboundMessage = await appendEmailMessage(conversation.id, "inbound", subject, bodyText, { messageId });
@@ -132,28 +132,28 @@ async function processInboundEmailLocked(
   const customerFirstName = emailCustomer && emailCustomer.firstName && emailCustomer.firstName !== "Unknown" ? emailCustomer.firstName : null;
 
   const body = toEmailPreviewBody(conversation, [...priorMessages, inboundMessage], customerFirstName);
-  let result: LucyTurnResult;
+  let result: ChrisTurnResult;
   try {
-    result = await runLucyTurn(personId, body);
+    result = await runChrisTurn(personId, body);
   } catch (err) {
-    // Same reasoning as lucy-dispatch.service.ts's (SMS) equivalent catch:
-    // anything that escapes runLucyTurn itself (e.g. a DB failure minting
+    // Same reasoning as chris-dispatch.service.ts's (SMS) equivalent catch:
+    // anything that escapes runChrisTurn itself (e.g. a DB failure minting
     // the intake link on send_form) isn't a guardrail rejection, but the
     // customer still got silence, so it needs the same staff-visible flag.
-    logger.error({ personId, conversationId: conversation.id, reason: err instanceof Error ? err.message : String(err) }, "Lucy email turn threw unexpectedly — no outbound email sent");
+    logger.error({ personId, conversationId: conversation.id, reason: err instanceof Error ? err.message : String(err) }, "Chris email turn threw unexpectedly — no outbound email sent");
     await updateEmailConversationState(conversation.id, { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "exception" }) });
     return { ok: false, code: "UNEXPECTED_ERROR" };
   }
 
   if (!result.ok) {
-    logger.warn({ personId, conversationId: conversation.id, code: result.code }, "Lucy email turn rejected — no outbound email sent");
+    logger.warn({ personId, conversationId: conversation.id, code: result.code }, "Chris email turn rejected — no outbound email sent");
     await updateEmailConversationState(conversation.id, { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "rejected", code: result.code }) });
     return result;
   }
 
   await setEmailMessageSentiment(inboundMessage.id, result.inboundSentiment);
 
-  // Guarded the same way as lucy-dispatch.service.ts's (SMS) equivalent —
+  // Guarded the same way as chris-dispatch.service.ts's (SMS) equivalent —
   // trust but verify even though the prompt already tells Claude not to
   // report this once customerFirstName is known. Written before the re-fetch
   // below so this very reply's greeting already uses the name just learned,
@@ -170,7 +170,7 @@ async function processInboundEmailLocked(
 
   // Set DND only after this turn's reply has gone out — see sendAndLog's
   // docstring. action === "pause" is unique to the OPT_OUT pre-check code
-  // (see PRE_CHECK_RESULTS in lucy-conversation.service.ts) — every other
+  // (see PRE_CHECK_RESULTS in chris-conversation.service.ts) — every other
   // pre-check code maps to "staff_review" instead.
   if (result.action === "pause") {
     await setCustomerEmailDnd(personId, true);
@@ -195,7 +195,7 @@ async function processInboundEmailLocked(
   });
 
   // Same follow-through as the SMS side — see the identical comment in
-  // lucy-dispatch.service.ts.
+  // chris-dispatch.service.ts.
   if (result.objectionKey === "think_about_it" && result.objectionStage === 2) {
     await scheduleObjectionReengagement(personId, conversation.leadSource);
   }
@@ -226,7 +226,7 @@ export async function sendEmailStaffReply(conversationId: string, body: string, 
   let messageId: string | null = null;
   let sendFailed = false;
   try {
-    const { provider, fromName } = getEmailProvider("lucy");
+    const { provider, fromName } = getEmailProvider("chris");
     const unsubscribeUrl = buildUnsubscribeUrl(detail.conversation.personId);
     const html = renderConversationReplyEmail(signedBody, unsubscribeUrl);
     const result = await provider.sendEmail(customer.email, subject, html, {

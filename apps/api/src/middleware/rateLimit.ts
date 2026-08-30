@@ -85,7 +85,7 @@ export function createAiAssistantLimiter(): RateLimitRequestHandler {
 }
 
 // Same reasoning as createAiAssistantLimiter — one LLM call per request.
-export function createLucyTestLimiter(): RateLimitRequestHandler {
+export function createChrisTestLimiter(): RateLimitRequestHandler {
   return rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 30,
@@ -95,8 +95,8 @@ export function createLucyTestLimiter(): RateLimitRequestHandler {
   });
 }
 
-// Same reasoning as createLucyTestLimiter, for Sarah's test surface.
-export function createSarahTestLimiter(): RateLimitRequestHandler {
+// Same reasoning as createChrisTestLimiter, for Mia's test surface.
+export function createMiaTestLimiter(): RateLimitRequestHandler {
   return rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 30,

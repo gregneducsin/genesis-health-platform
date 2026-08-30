@@ -3,8 +3,8 @@ import { eq, sql } from "drizzle-orm";
 import { db, customersTable, supportConversationsTable, unmatchedSmsThreadsTable, unmatchedSmsMessagesTable, type UnmatchedSmsThread, type UnmatchedSmsMessage } from "@luma/db";
 import { getSmsProvider } from "../lib/sms-provider.js";
 import { normalizePhone } from "../lib/phone.js";
-import { processInboundMessage } from "./lucy-dispatch.service.js";
-import { processInboundSupportMessage } from "./sarah-dispatch.service.js";
+import { processInboundMessage } from "./chris-dispatch.service.js";
+import { processInboundSupportMessage } from "./mia-dispatch.service.js";
 import { getOrCreateConversation, appendMessage } from "./conversations.service.js";
 import { getOrCreateSupportConversation, appendSupportMessage } from "./support-conversations.service.js";
 import { logger } from "../lib/logger.js";
@@ -41,7 +41,7 @@ import { notifySlack } from "../lib/slack.js";
  *
  * The moment a lead is created (name + email both known, Claude confident
  * this is a genuine prospective customer, not spam), the triggering message
- * is handed off to Joy's real, guardrailed pipeline (processInboundMessage)
+ * is handed off to Chris's real, guardrailed pipeline (processInboundMessage)
  * as a Meta-lead-style conversation — same trust level every other
  * unattended lead-capture path in this app already operates at.
  */
@@ -378,7 +378,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * per-turn from that one message alone and can reasonably read as "other"
  * rather than re-asserting "new_lead_interest" every time. Gating lead
  * creation on that one exact label firing again silently stranded a real
- * lead in this queue indefinitely (no lead created, no handoff to Lucy,
+ * lead in this queue indefinitely (no lead created, no handoff to Chris,
  * just an endless string of Claude's own generic replies) until a staff
  * member noticed and stepped in manually. Once we have a real name and
  * email and nothing below rules it out, that's enough evidence on its own —
@@ -680,8 +680,8 @@ export async function recordAndClassifyUnmatchedSms(fromPhone: string, body: str
     }
   } else if (leadResult?.justCreated) {
     // Confident enough to create the lead means confident enough to hand
-    // THIS message straight to Joy's real, guardrailed pipeline — not the
-    // generic staff queue. Same trust level Joy already operates at
+    // THIS message straight to Chris's real, guardrailed pipeline — not the
+    // generic staff queue. Same trust level Chris already operates at
     // unattended for every other lead. Treated as a Meta lead-gen contact
     // (state/currentlyTaking/product first, then proactive pricing), not
     // an abandoned-cart lead — this person never started a Bask
@@ -691,7 +691,7 @@ export async function recordAndClassifyUnmatchedSms(fromPhone: string, body: str
       await seedPriorHistory((direction, msgBody) => appendMessage(conversation.id, direction, msgBody), messages);
       await processInboundMessage(leadResult.customerId, body, "meta_form");
     } catch (err) {
-      logger.warn({ threadId: thread.id, reason: err instanceof Error ? err.message : String(err) }, "handoff to Joy after lead creation failed");
+      logger.warn({ threadId: thread.id, reason: err instanceof Error ? err.message : String(err) }, "handoff to Chris after lead creation failed");
     }
   } else if (isFirstEncounterWithEmailMatch && classification?.intent !== "spam_or_irrelevant") {
     // Ask instead of park — see isFirstEncounterWithEmailMatch's comment
@@ -702,7 +702,7 @@ export async function recordAndClassifyUnmatchedSms(fromPhone: string, body: str
   } else if (isFirstMessage && classification?.intent !== "spam_or_irrelevant") {
     // One immediate, fixed, content-free acknowledgment per thread — see
     // sendAutoAcknowledgment's docstring. Only on the thread's first-ever
-    // message; skipped above when Joy is about to reply live instead. Also
+    // message; skipped above when Chris is about to reply live instead. Also
     // skipped for spam/irrelevant. A failed classification call
     // (classification is null) still gets the ack, same as the email
     // version — no way to know it's spam without Claude.

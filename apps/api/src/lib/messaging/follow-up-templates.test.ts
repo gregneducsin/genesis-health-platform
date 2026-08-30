@@ -35,9 +35,9 @@ describe("renderFollowUpMessage", () => {
     });
   }
 
-  it("provider_check_in does not re-introduce Joy — the opener already did, hours earlier in the same thread", () => {
+  it("provider_check_in does not re-introduce Chris — the opener already did, hours earlier in the same thread", () => {
     const text = renderFollowUpMessage("provider_check_in", "Jamie");
-    expect(text).not.toContain("this is Joy with Genesis Health");
+    expect(text).not.toContain("this is Chris with Genesis Health");
   });
 });
 

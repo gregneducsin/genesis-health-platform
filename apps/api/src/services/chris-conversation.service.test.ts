@@ -15,12 +15,12 @@ vi.mock("../lib/messaging/provider.js", async () => {
   };
 });
 
-const { runLucyTurn } = await import("./lucy-conversation.service.js");
+const { runChrisTurn } = await import("./chris-conversation.service.js");
 
 async function seedCustomer(): Promise<string> {
   const [row] = await db
     .insert(customersTable)
-    .values({ firstName: "Lucy", lastName: "Test", email: `lucy-${crypto.randomUUID()}@example.com`, leadReceivedDate: "2026-08-15" })
+    .values({ firstName: "Chris", lastName: "Test", email: `chris-${crypto.randomUUID()}@example.com`, leadReceivedDate: "2026-08-15" })
     .returning({ id: customersTable.id });
   return row.id;
 }
@@ -73,11 +73,11 @@ function modelResult(overrides: Partial<ClaudeInteractiveResult> = {}): ClaudeIn
   };
 }
 
-describe("runLucyTurn", () => {
+describe("runChrisTurn", () => {
   it("short-circuits on a pre-check block without ever calling the provider", async () => {
     callClaudeInteractiveMock.mockClear();
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody({ messages: [{ direction: "inbound", body: "STOP" }] }));
+    const result = await runChrisTurn(personId, baseBody({ messages: [{ direction: "inbound", body: "STOP" }] }));
 
     expect(callClaudeInteractiveMock).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
@@ -91,7 +91,7 @@ describe("runLucyTurn", () => {
   it("routes a suitability question to staff_review via pre-check, no provider call, but still replies instead of leaving the customer in silence", async () => {
     callClaudeInteractiveMock.mockClear();
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody({ messages: [{ direction: "inbound", body: "which one is right for me?" }] }));
+    const result = await runChrisTurn(personId, baseBody({ messages: [{ direction: "inbound", body: "which one is right for me?" }] }));
 
     expect(callClaudeInteractiveMock).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
@@ -105,7 +105,7 @@ describe("runLucyTurn", () => {
   it("pre-check-blocks an active side-effect report as SIDE_EFFECT_REPORT, with a reply naming real options for the doctor to review", async () => {
     callClaudeInteractiveMock.mockClear();
     const personId = await seedCustomer();
-    const result = await runLucyTurn(
+    const result = await runChrisTurn(
       personId,
       baseBody({ messages: [{ direction: "inbound", body: "It makes my stomach hurt and sometimes I throw up in the morning. And I have diarrhea sometimes." }] }),
     );
@@ -121,7 +121,7 @@ describe("runLucyTurn", () => {
   });
 
   it("lets a model-generated turn handle a short topic-naming reply to our own last question, instead of pre-check-blocking it as MEDICAL_CONTENT", async () => {
-    // Real production case: Lucy asked "is there something specific about
+    // Real production case: Chris asked "is there something specific about
     // the process you'd like me to go over?" and the customer answered
     // "Medication and plans" — a bare medical-word match on an unprompted
     // question would have blocked this; body.lastQuestion is what tells
@@ -129,7 +129,7 @@ describe("runLucyTurn", () => {
     callClaudeInteractiveMock.mockClear();
     callClaudeInteractiveMock.mockResolvedValueOnce(modelResult());
     const personId = await seedCustomer();
-    const result = await runLucyTurn(
+    const result = await runChrisTurn(
       personId,
       baseBody({
         messages: [{ direction: "inbound", body: "Medication and plans" }],
@@ -147,7 +147,7 @@ describe("runLucyTurn", () => {
   it("still pre-check-blocks a short medical-word reply as MEDICAL_CONTENT when we hadn't asked anything", async () => {
     callClaudeInteractiveMock.mockClear();
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody({ messages: [{ direction: "inbound", body: "Medication and plans" }], lastQuestion: null }));
+    const result = await runChrisTurn(personId, baseBody({ messages: [{ direction: "inbound", body: "Medication and plans" }], lastQuestion: null }));
 
     expect(callClaudeInteractiveMock).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
@@ -160,7 +160,7 @@ describe("runLucyTurn", () => {
     callClaudeInteractiveMock.mockClear();
     callClaudeInteractiveMock.mockResolvedValueOnce(modelResult({ reply: "We accept insurance.", knowledgeTopicsUsed: ["insurance_payment"] }));
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody());
+    const result = await runChrisTurn(personId, baseBody());
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("UNSUPPORTED_PRICING_CLAIM");
@@ -170,7 +170,7 @@ describe("runLucyTurn", () => {
     callClaudeInteractiveMock.mockClear();
     callClaudeInteractiveMock.mockResolvedValueOnce(modelResult({ knowledgeTopicsUsed: ["some_future_unenabled_topic"] }));
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody());
+    const result = await runChrisTurn(personId, baseBody());
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("UNKNOWN_KNOWLEDGE_TOPIC");
@@ -182,7 +182,7 @@ describe("runLucyTurn", () => {
       modelResult({ action: "send_form", reply: "Perfect, sending you the signup link now.", nextQuestion: null, knowledgeTopicsUsed: [] }),
     );
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody());
+    const result = await runChrisTurn(personId, baseBody());
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -198,7 +198,7 @@ describe("runLucyTurn", () => {
     callClaudeInteractiveMock.mockClear();
     callClaudeInteractiveMock.mockResolvedValueOnce(modelResult({ objectionStage: 1 }));
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody({ objectionStage: 0 }));
+    const result = await runChrisTurn(personId, baseBody({ objectionStage: 0 }));
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.objectionStage).toBe(1);
@@ -210,7 +210,7 @@ describe("runLucyTurn", () => {
       .mockResolvedValueOnce(modelResult({ nextQuestion: null }))
       .mockResolvedValueOnce(modelResult({ nextQuestion: "Which plan works for you?" }));
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody());
+    const result = await runChrisTurn(personId, baseBody());
 
     expect(callClaudeInteractiveMock).toHaveBeenCalledTimes(2);
     expect(result.ok).toBe(true);
@@ -221,7 +221,7 @@ describe("runLucyTurn", () => {
     callClaudeInteractiveMock.mockClear();
     callClaudeInteractiveMock.mockResolvedValue(modelResult({ reply: "Which one would you like — semaglutide or tirzepatide?" }));
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody());
+    const result = await runChrisTurn(personId, baseBody());
 
     expect(callClaudeInteractiveMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(result.ok).toBe(false);
@@ -232,7 +232,7 @@ describe("runLucyTurn", () => {
     callClaudeInteractiveMock.mockClear();
     callClaudeInteractiveMock.mockResolvedValueOnce(modelResult({ reply: "We accept insurance.", knowledgeTopicsUsed: ["insurance_payment"] }));
     const personId = await seedCustomer();
-    const result = await runLucyTurn(personId, baseBody());
+    const result = await runChrisTurn(personId, baseBody());
 
     expect(callClaudeInteractiveMock).toHaveBeenCalledTimes(1);
     expect(result.ok).toBe(false);

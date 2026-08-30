@@ -1,9 +1,9 @@
 /**
- * Fixed, pre-approved messages for Lisa's post-purchase support flow. Every
+ * Fixed, pre-approved messages for Mia's post-purchase support flow. Every
  * one of these is a status update fired off a real webhook event, not
  * AI-drafted — proactive outbound messages don't have an inbound message to
  * react to, so there's nothing for the guardrail loop to validate against;
- * the fixed approved text is the guardrail here. Same reasoning as Joy's
+ * the fixed approved text is the guardrail here. Same reasoning as Chris's
  * follow-up-templates.ts.
  */
 
@@ -12,7 +12,7 @@ import { APPROVED_PORTAL_URL } from "../messaging/knowledge-catalog.js";
 export function renderOrderReceivedMessage(firstName: string): string {
   const name = firstName.trim() || "there";
   return (
-    `Hello ${name}, this is Lisa on the doctor support side. It looks like we received your order and the doctor is reviewing it now. ` +
+    `Hello ${name}, this is Mia on the doctor support side. It looks like we received your order and the doctor is reviewing it now. ` +
     `If they have any further questions they will reach out in the patient portal, ${APPROVED_PORTAL_URL}\n\n` +
     "We will update you once the prescription is written and sent to the pharmacy."
   );
@@ -21,7 +21,7 @@ export function renderOrderReceivedMessage(firstName: string): string {
 export function renderRefillOrderReceivedMessage(firstName: string): string {
   const name = firstName.trim() || "there";
   return (
-    `Hi ${name}, this is Lisa on the doctor support side. We've received your refill order and it's being processed now. ` +
+    `Hi ${name}, this is Mia on the doctor support side. We've received your refill order and it's being processed now. ` +
     `If you have any questions in the meantime, you can check your patient portal, ${APPROVED_PORTAL_URL}\n\n` +
     "We will update you once it ships."
   );
@@ -39,7 +39,7 @@ export function renderOrderShippedMessage(firstName: string, trackingNumber: str
 
 export function renderReviewRequestMessage(firstName: string): string {
   const name = firstName.trim() || "there";
-  return `Hi ${name}, this is Lisa with Genesis Health. Now that you've had a chance to receive your medication, how has your experience with us been so far?`;
+  return `Hi ${name}, this is Mia with Genesis Health. Now that you've had a chance to receive your medication, how has your experience with us been so far?`;
 }
 
 /**
@@ -54,10 +54,10 @@ export function renderReviewRequestMessage(firstName: string): string {
  */
 export function renderPaymentFailedFirstOrderMessage(firstName: string): string {
   const name = firstName.trim() || "there";
-  return `Hi ${name}, this is Lisa with Genesis Health. We weren't able to process the payment for your order, so we can't move forward with it yet. Reply here and we'll get your payment sorted.`;
+  return `Hi ${name}, this is Mia with Genesis Health. We weren't able to process the payment for your order, so we can't move forward with it yet. Reply here and we'll get your payment sorted.`;
 }
 
 export function renderPaymentFailedRecurringMessage(firstName: string): string {
   const name = firstName.trim() || "there";
-  return `Hi ${name}, this is Lisa with Genesis Health. We weren't able to process the payment for your refill. Are you still interested in moving forward with it? Reply here and let us know.`;
+  return `Hi ${name}, this is Mia with Genesis Health. We weren't able to process the payment for your refill. Are you still interested in moving forward with it? Reply here and let us know.`;
 }

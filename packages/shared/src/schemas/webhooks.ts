@@ -174,7 +174,7 @@ export type BaskPrescriptionWrittenWebhookRequest = z.infer<typeof baskPrescript
 // handleBaskOrderShippedWebhook for how it copes with both being absent.
 // Bask's real payload also carries nested products/shipments arrays (drug
 // name, dosage strength, pharmacy, etc.) — deliberately not modeled here
-// since Sarah's shipped notice only needs the tracking number, not
+// since Mia's shipped notice only needs the tracking number, not
 // per-item clinical detail.
 
 export const baskOrderShippedWebhookRequestSchema = z.object({

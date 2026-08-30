@@ -7,7 +7,7 @@ import {
   type SupportEmailConversation,
   type SupportEmailConversationMessage,
 } from "@luma/db";
-import type { SarahPreviewRequestBody } from "../lib/support/types.js";
+import type { MiaPreviewRequestBody } from "../lib/support/types.js";
 import { notifySlack } from "../lib/slack.js";
 
 const MAX_HISTORY_MESSAGES = 20;
@@ -129,8 +129,8 @@ export async function listSupportEmailMessages(conversationId: string, limit = M
   return rows.reverse();
 }
 
-/** Email twin of support-conversations.service.ts's toSarahPreviewBody — runSarahTurn is channel-agnostic and reused unchanged. */
-export function toSupportEmailPreviewBody(conversation: SupportEmailConversation, history: readonly SupportEmailConversationMessage[]): SarahPreviewRequestBody {
+/** Email twin of support-conversations.service.ts's toMiaPreviewBody — runMiaTurn is channel-agnostic and reused unchanged. */
+export function toSupportEmailPreviewBody(conversation: SupportEmailConversation, history: readonly SupportEmailConversationMessage[]): MiaPreviewRequestBody {
   return {
     messages: history.map((m) => ({ direction: m.direction, body: m.body })),
     orderState: {
@@ -186,7 +186,7 @@ export async function listSupportEmailConversationSummaries(): Promise<SupportEm
   return rows.map((r) => ({ ...r, lastSentiment: r.lastSentiment as SupportEmailConversationSummary["lastSentiment"] }));
 }
 
-/** Email twin of support-conversations.service.ts's getSupportConversationDetail — customer.email included, same reasoning as the Lucy-side twin. */
+/** Email twin of support-conversations.service.ts's getSupportConversationDetail — customer.email included, same reasoning as the Chris-side twin. */
 export async function getSupportEmailConversationDetail(
   conversationId: string,
 ): Promise<{

@@ -20,7 +20,7 @@ export const intakeLinkTokensTable = pgTable(
     tokenHash: text("token_hash").notNull(),
     /**
      * Which Bask URL variant this link redirects to. Decided at mint time
-     * (e.g. by whether the Lucy conversation used the first_month_offer
+     * (e.g. by whether the Chris conversation used the first_month_offer
      * topic before agreement), not at click time — the click happens hours
      * later with no memory of what was discussed.
      */
@@ -90,7 +90,7 @@ export const followUpJobsTable = pgTable(
 );
 
 /**
- * One Lucy conversation thread per customer (1:1). `leadSource` selects which
+ * One Chris conversation thread per customer (1:1). `leadSource` selects which
  * script the prompt builder uses — abandoned_cart assumes the patient already
  * engaged with checkout and just needs closing; meta_form is cold outreach off
  * a Meta lead-gen form and works through state/currentlyTaking/product before
@@ -154,7 +154,7 @@ export const conversationsTable = pgTable(
 
 /**
  * Every message in a conversation, in order. `sentiment` is set on inbound
- * messages only, tagged by the same Claude call that produces Lucy's reply
+ * messages only, tagged by the same Claude call that produces Chris's reply
  * (no separate classification call).
  */
 export const conversationMessagesTable = pgTable(
@@ -168,7 +168,7 @@ export const conversationMessagesTable = pgTable(
     body: text("body").notNull(),
     sentiment: text("sentiment", { enum: ["positive", "neutral", "negative"] }),
     providerMessageId: text("provider_message_id"),
-    /** Who actually wrote an outbound message — Joy (or an automated trigger) vs a staff member typing into the reply box. Null on inbound (always the customer). */
+    /** Who actually wrote an outbound message — Chris (or an automated trigger) vs a staff member typing into the reply box. Null on inbound (always the customer). */
     sentBy: text("sent_by", { enum: ["ai", "staff"] }),
     /** Which staff member actually sent it — set only when sentBy is "staff". Denormalized (not an FK), same convention as customer_notes.authorEmail, so history reads correctly even if the account is later renamed/disabled. */
     sentByStaffEmail: text("sent_by_staff_email"),
@@ -217,7 +217,7 @@ export const abandonedCartTriggersTable = pgTable(
 
 /**
  * Schedules a one-time check-in 6 days after the very first outbound
- * message Lucy ever sends a lead (armed from sendOpener in
+ * message Chris ever sends a lead (armed from sendOpener in
  * abandoned-cart.service.ts and sendMetaLeadOpener in meta-lead.service.ts —
  * whichever fires first for that person). One row per person (unique
  * index), so it can only ever arm once regardless of which opener path

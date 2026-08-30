@@ -14,7 +14,7 @@ beforeAll(() => {
 const sendEmailMock = vi.fn();
 vi.mock("../lib/email-provider.js", async () => {
   const actual = await vi.importActual<typeof import("../lib/email-provider.js")>("../lib/email-provider.js");
-  return { ...actual, getEmailProvider: () => ({ provider: { sendEmail: sendEmailMock }, fromName: "Lucy at Genesis Health" }) };
+  return { ...actual, getEmailProvider: () => ({ provider: { sendEmail: sendEmailMock }, fromName: "Chris at Genesis Health" }) };
 });
 
 const notifySlackMock = vi.fn();

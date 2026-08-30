@@ -83,7 +83,7 @@ export async function sendOrderReceivedOpener(personId: string): Promise<void> {
 
   const emailConversation = await getOrCreateSupportEmailConversation(personId);
   await sendTriggerEmail({
-    persona: "sarah",
+    persona: "mia",
     personId,
     conversationId: emailConversation.id,
     email: customer.email,
@@ -125,7 +125,7 @@ export async function sendRefillOrderReceivedNotice(personId: string): Promise<v
 
   const emailConversation = await getOrCreateSupportEmailConversation(personId);
   await sendTriggerEmail({
-    persona: "sarah",
+    persona: "mia",
     personId,
     conversationId: emailConversation.id,
     email: customer.email,
@@ -158,7 +158,7 @@ export async function handlePrescriptionWritten(personId: string): Promise<void>
   if (customer) {
     const emailConversation = await getOrCreateSupportEmailConversation(personId);
     await sendTriggerEmail({
-      persona: "sarah",
+      persona: "mia",
       personId,
       conversationId: emailConversation.id,
       email: customer.email,
@@ -195,7 +195,7 @@ export async function handleOrderShipped(personId: string, trackingNumber: strin
   if (customer) {
     const emailConversation = await getOrCreateSupportEmailConversation(personId);
     await sendTriggerEmail({
-      persona: "sarah",
+      persona: "mia",
       personId,
       conversationId: emailConversation.id,
       email: customer.email,
@@ -250,7 +250,7 @@ export async function handlePaymentFailed(personId: string, isFirstOrder: boolea
   if (customer) {
     const emailConversation = await getOrCreateSupportEmailConversation(personId);
     await sendTriggerEmail({
-      persona: "sarah",
+      persona: "mia",
       personId,
       conversationId: emailConversation.id,
       email: customer.email,
@@ -354,7 +354,7 @@ export async function sweepReviewRequestTriggers(): Promise<ReviewRequestSweepRe
     try {
       await appendSupportMessage(conversation.id, "outbound", text, { providerMessageId: result.providerMessageId });
       // Only flip reviewRequested once the text is actually confirmed sent —
-      // setting it on a failed attempt (as this used to) made Lisa's
+      // setting it on a failed attempt (as this used to) made Mia's
       // conversation loop treat the patient's next reply as a sentiment
       // answer to a review check-in question they were never actually sent.
       await updateSupportConversationState(conversation.id, { reviewRequested: true });

@@ -19,25 +19,25 @@ async function seedCustomer(firstName: string): Promise<string> {
 
 describe("listNeedsAttention", () => {
   it("returns flagged conversations across all 4 channels and excludes unflagged ones", async () => {
-    const lucySmsPerson = await seedCustomer("LucySms");
-    const lucySmsConvo = await getOrCreateConversation(lucySmsPerson);
-    await appendMessage(lucySmsConvo.id, "inbound", "help, I have a medical question", {});
-    await updateConversationState(lucySmsConvo.id, { needsAttention: true });
+    const chrisSmsPerson = await seedCustomer("ChrisSms");
+    const chrisSmsConvo = await getOrCreateConversation(chrisSmsPerson);
+    await appendMessage(chrisSmsConvo.id, "inbound", "help, I have a medical question", {});
+    await updateConversationState(chrisSmsConvo.id, { needsAttention: true });
 
-    const sarahSmsPerson = await seedCustomer("SarahSms");
-    const sarahSmsConvo = await getOrCreateSupportConversation(sarahSmsPerson);
-    await appendSupportMessage(sarahSmsConvo.id, "inbound", "is this covered by insurance", {});
-    await updateSupportConversationState(sarahSmsConvo.id, { needsAttention: true });
+    const miaSmsPerson = await seedCustomer("MiaSms");
+    const miaSmsConvo = await getOrCreateSupportConversation(miaSmsPerson);
+    await appendSupportMessage(miaSmsConvo.id, "inbound", "is this covered by insurance", {});
+    await updateSupportConversationState(miaSmsConvo.id, { needsAttention: true });
 
-    const lucyEmailPerson = await seedCustomer("LucyEmail");
-    const lucyEmailConvo = await getOrCreateEmailConversation(lucyEmailPerson);
-    await appendEmailMessage(lucyEmailConvo.id, "inbound", "Question", "what state am I in for this", {});
-    await updateEmailConversationState(lucyEmailConvo.id, { needsAttention: true });
+    const chrisEmailPerson = await seedCustomer("ChrisEmail");
+    const chrisEmailConvo = await getOrCreateEmailConversation(chrisEmailPerson);
+    await appendEmailMessage(chrisEmailConvo.id, "inbound", "Question", "what state am I in for this", {});
+    await updateEmailConversationState(chrisEmailConvo.id, { needsAttention: true });
 
-    const sarahEmailPerson = await seedCustomer("SarahEmail");
-    const sarahEmailConvo = await getOrCreateSupportEmailConversation(sarahEmailPerson);
-    await appendSupportEmailMessage(sarahEmailConvo.id, "inbound", "Re: order", "emergency, please call me", {});
-    await updateSupportEmailConversationState(sarahEmailConvo.id, { needsAttention: true });
+    const miaEmailPerson = await seedCustomer("MiaEmail");
+    const miaEmailConvo = await getOrCreateSupportEmailConversation(miaEmailPerson);
+    await appendSupportEmailMessage(miaEmailConvo.id, "inbound", "Re: order", "emergency, please call me", {});
+    await updateSupportEmailConversationState(miaEmailConvo.id, { needsAttention: true });
 
     const notFlaggedPerson = await seedCustomer("NotFlagged");
     await getOrCreateConversation(notFlaggedPerson);
@@ -45,10 +45,10 @@ describe("listNeedsAttention", () => {
     const items = await listNeedsAttention();
     const byPerson = Object.fromEntries(items.map((i) => [i.personId, i]));
 
-    expect(byPerson[lucySmsPerson]).toMatchObject({ channel: "sms", persona: "lucy" });
-    expect(byPerson[sarahSmsPerson]).toMatchObject({ channel: "sms", persona: "sarah" });
-    expect(byPerson[lucyEmailPerson]).toMatchObject({ channel: "email", persona: "lucy" });
-    expect(byPerson[sarahEmailPerson]).toMatchObject({ channel: "email", persona: "sarah" });
+    expect(byPerson[chrisSmsPerson]).toMatchObject({ channel: "sms", persona: "chris" });
+    expect(byPerson[miaSmsPerson]).toMatchObject({ channel: "sms", persona: "mia" });
+    expect(byPerson[chrisEmailPerson]).toMatchObject({ channel: "email", persona: "chris" });
+    expect(byPerson[miaEmailPerson]).toMatchObject({ channel: "email", persona: "mia" });
     expect(byPerson[notFlaggedPerson]).toBeUndefined();
   });
 });
@@ -60,7 +60,7 @@ describe("getNeedsAttentionMessages", () => {
     await appendEmailMessage(convo.id, "inbound", "First subject", "first body", {});
     await appendEmailMessage(convo.id, "outbound", "Second subject", "second body", {});
 
-    const messages = await getNeedsAttentionMessages("email", "lucy", convo.id);
+    const messages = await getNeedsAttentionMessages("email", "chris", convo.id);
     expect(messages.map((m) => m.subject)).toEqual(["First subject", "Second subject"]);
     expect(messages.map((m) => m.direction)).toEqual(["inbound", "outbound"]);
   });
@@ -70,7 +70,7 @@ describe("getNeedsAttentionMessages", () => {
     const convo = await getOrCreateConversation(personId);
     await appendMessage(convo.id, "inbound", "hi there", {});
 
-    const messages = await getNeedsAttentionMessages("sms", "lucy", convo.id);
+    const messages = await getNeedsAttentionMessages("sms", "chris", convo.id);
     expect(messages).toHaveLength(1);
     expect(messages[0].subject).toBeNull();
     expect(messages[0].body).toBe("hi there");
@@ -79,29 +79,29 @@ describe("getNeedsAttentionMessages", () => {
 
 describe("clearNeedsAttentionItem", () => {
   it("clears the flag for each of the 4 channel/persona combinations", async () => {
-    const lucySmsPerson = await seedCustomer("ClearLucySms");
-    const lucySmsConvo = await getOrCreateConversation(lucySmsPerson);
-    await updateConversationState(lucySmsConvo.id, { needsAttention: true });
-    await clearNeedsAttentionItem("sms", "lucy", lucySmsConvo.id);
+    const chrisSmsPerson = await seedCustomer("ClearChrisSms");
+    const chrisSmsConvo = await getOrCreateConversation(chrisSmsPerson);
+    await updateConversationState(chrisSmsConvo.id, { needsAttention: true });
+    await clearNeedsAttentionItem("sms", "chris", chrisSmsConvo.id);
 
-    const sarahSmsPerson = await seedCustomer("ClearSarahSms");
-    const sarahSmsConvo = await getOrCreateSupportConversation(sarahSmsPerson);
-    await updateSupportConversationState(sarahSmsConvo.id, { needsAttention: true });
-    await clearNeedsAttentionItem("sms", "sarah", sarahSmsConvo.id);
+    const miaSmsPerson = await seedCustomer("ClearMiaSms");
+    const miaSmsConvo = await getOrCreateSupportConversation(miaSmsPerson);
+    await updateSupportConversationState(miaSmsConvo.id, { needsAttention: true });
+    await clearNeedsAttentionItem("sms", "mia", miaSmsConvo.id);
 
-    const lucyEmailPerson = await seedCustomer("ClearLucyEmail");
-    const lucyEmailConvo = await getOrCreateEmailConversation(lucyEmailPerson);
-    await updateEmailConversationState(lucyEmailConvo.id, { needsAttention: true });
-    await clearNeedsAttentionItem("email", "lucy", lucyEmailConvo.id);
+    const chrisEmailPerson = await seedCustomer("ClearChrisEmail");
+    const chrisEmailConvo = await getOrCreateEmailConversation(chrisEmailPerson);
+    await updateEmailConversationState(chrisEmailConvo.id, { needsAttention: true });
+    await clearNeedsAttentionItem("email", "chris", chrisEmailConvo.id);
 
-    const sarahEmailPerson = await seedCustomer("ClearSarahEmail");
-    const sarahEmailConvo = await getOrCreateSupportEmailConversation(sarahEmailPerson);
-    await updateSupportEmailConversationState(sarahEmailConvo.id, { needsAttention: true });
-    await clearNeedsAttentionItem("email", "sarah", sarahEmailConvo.id);
+    const miaEmailPerson = await seedCustomer("ClearMiaEmail");
+    const miaEmailConvo = await getOrCreateSupportEmailConversation(miaEmailPerson);
+    await updateSupportEmailConversationState(miaEmailConvo.id, { needsAttention: true });
+    await clearNeedsAttentionItem("email", "mia", miaEmailConvo.id);
 
     const items = await listNeedsAttention();
     const flaggedPersonIds = new Set(items.map((i) => i.personId));
-    for (const personId of [lucySmsPerson, sarahSmsPerson, lucyEmailPerson, sarahEmailPerson]) {
+    for (const personId of [chrisSmsPerson, miaSmsPerson, chrisEmailPerson, miaEmailPerson]) {
       expect(flaggedPersonIds.has(personId)).toBe(false);
     }
   });
@@ -111,27 +111,27 @@ describe("Slack alert on needsAttention — all 4 channels", () => {
   it("alerts once per channel when a conversation is first flagged", async () => {
     notifySlackMock.mockClear();
 
-    const lucySmsPerson = await seedCustomer("SlackLucySms");
-    const lucySmsConvo = await getOrCreateConversation(lucySmsPerson);
-    await updateConversationState(lucySmsConvo.id, { needsAttention: true, needsAttentionReason: "lucy sms reason" });
+    const chrisSmsPerson = await seedCustomer("SlackChrisSms");
+    const chrisSmsConvo = await getOrCreateConversation(chrisSmsPerson);
+    await updateConversationState(chrisSmsConvo.id, { needsAttention: true, needsAttentionReason: "chris sms reason" });
 
-    const sarahSmsPerson = await seedCustomer("SlackSarahSms");
-    const sarahSmsConvo = await getOrCreateSupportConversation(sarahSmsPerson);
-    await updateSupportConversationState(sarahSmsConvo.id, { needsAttention: true, needsAttentionReason: "sarah sms reason" });
+    const miaSmsPerson = await seedCustomer("SlackMiaSms");
+    const miaSmsConvo = await getOrCreateSupportConversation(miaSmsPerson);
+    await updateSupportConversationState(miaSmsConvo.id, { needsAttention: true, needsAttentionReason: "mia sms reason" });
 
-    const lucyEmailPerson = await seedCustomer("SlackLucyEmail");
-    const lucyEmailConvo = await getOrCreateEmailConversation(lucyEmailPerson);
-    await updateEmailConversationState(lucyEmailConvo.id, { needsAttention: true, needsAttentionReason: "lucy email reason" });
+    const chrisEmailPerson = await seedCustomer("SlackChrisEmail");
+    const chrisEmailConvo = await getOrCreateEmailConversation(chrisEmailPerson);
+    await updateEmailConversationState(chrisEmailConvo.id, { needsAttention: true, needsAttentionReason: "chris email reason" });
 
-    const sarahEmailPerson = await seedCustomer("SlackSarahEmail");
-    const sarahEmailConvo = await getOrCreateSupportEmailConversation(sarahEmailPerson);
-    await updateSupportEmailConversationState(sarahEmailConvo.id, { needsAttention: true, needsAttentionReason: "sarah email reason" });
+    const miaEmailPerson = await seedCustomer("SlackMiaEmail");
+    const miaEmailConvo = await getOrCreateSupportEmailConversation(miaEmailPerson);
+    await updateSupportEmailConversationState(miaEmailConvo.id, { needsAttention: true, needsAttentionReason: "mia email reason" });
 
     expect(notifySlackMock).toHaveBeenCalledTimes(4);
     const messages = notifySlackMock.mock.calls.map((c) => c[0]);
-    expect(messages.some((m) => m.includes("lucy sms reason"))).toBe(true);
-    expect(messages.some((m) => m.includes("sarah sms reason"))).toBe(true);
-    expect(messages.some((m) => m.includes("lucy email reason"))).toBe(true);
-    expect(messages.some((m) => m.includes("sarah email reason"))).toBe(true);
+    expect(messages.some((m) => m.includes("chris sms reason"))).toBe(true);
+    expect(messages.some((m) => m.includes("mia sms reason"))).toBe(true);
+    expect(messages.some((m) => m.includes("chris email reason"))).toBe(true);
+    expect(messages.some((m) => m.includes("mia email reason"))).toBe(true);
   });
 });

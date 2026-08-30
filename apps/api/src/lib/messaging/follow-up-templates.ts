@@ -29,7 +29,7 @@ export type FollowUpMessageStep = "provider_check_in" | "intake_questions_check_
 
 /**
  * provider_check_in fires only ~2 hours after the opener (which already
- * introduced Joy by name and company) in the same thread — repeating the
+ * introduced Chris by name and company) in the same thread — repeating the
  * full self-introduction there read as robotic rather than as a real
  * follow-up from someone the recipient just heard from, so it's dropped
  * here the same way intake_questions_check_in already omits it.
@@ -57,24 +57,24 @@ export function renderFollowUpMessage(step: FollowUpMessageStep, firstName: stri
  * 24/7, no monitored-hours window. Fixed template, not AI-drafted, same
  * reasoning as the follow-up nudges above. Mentions the $20-off offer
  * directly but deliberately does not include a link — if the customer
- * responds with interest, the normal Lucy conversation loop (runLucyTurn)
+ * responds with interest, the normal Chris conversation loop (runChrisTurn)
  * takes over and mints the real link via action=send_form.
  */
 export function renderAbandonedCartOpener(firstName: string): string {
   const name = firstName.trim() || "there";
   return pickVariant([
-    `Hi ${name}, this is Joy with Genesis Health. I noticed you started your online visit but didn't get a chance to finish it. Complete your enrollment now and get $20 off your first month. Want me to send the link to get started?`,
-    `Hi ${name}, this is Joy with Genesis Health. Looks like you started your online visit but didn't quite finish it. Complete your enrollment and get $20 off your first month. Want the link so you can pick back up?`,
+    `Hi ${name}, this is Chris with Genesis Health. I noticed you started your online visit but didn't get a chance to finish it. Complete your enrollment now and get $20 off your first month. Want me to send the link to get started?`,
+    `Hi ${name}, this is Chris with Genesis Health. Looks like you started your online visit but didn't quite finish it. Complete your enrollment and get $20 off your first month. Want the link so you can pick back up?`,
   ]);
 }
 
 /**
  * Same abandoned-questionnaire nudge as renderAbandonedCartOpener, for a
- * lead who already has an active conversation with Joy by the time this
+ * lead who already has an active conversation with Chris by the time this
  * fires — most commonly, they came in as a Meta lead first and only later
  * started (then abandoned) the Bask questionnaire separately. Drops the
  * self-introduction — same reasoning as provider_check_in/
- * intake_questions_check_in above — since repeating "Hi, this is Joy with
+ * intake_questions_check_in above — since repeating "Hi, this is Chris with
  * Genesis Health" into an already-ongoing thread reads as a robotic
  * duplicate, not a genuine follow-up. The abandoned-questionnaire signal
  * itself is still real and worth sending, just without re-introducing her.
@@ -93,27 +93,27 @@ export function renderAbandonedCartFollowUp(firstName: string): string {
  * webhook, 24/7, no monitored-hours window. Fixed template, not AI-drafted,
  * same reasoning as the abandoned-cart opener. Cold outreach, not a
  * "finish what you started" message — asks for state first (doubles as the
- * reason for the text: checking current promotions). The normal Lucy
- * conversation loop (runLucyTurn) takes over from the reply.
+ * reason for the text: checking current promotions). The normal Chris
+ * conversation loop (runChrisTurn) takes over from the reply.
  */
 export function renderMetaLeadOpener(firstName: string): string {
   const name = firstName.trim() || "there";
   return pickVariant([
-    `Hey ${name}, this is Joy with Genesis Health. I wanted to check what state you're in to see what promotions we have running for you right now.`,
-    `Hey ${name}, this is Joy with Genesis Health. Wanted to check what state you're located in so I can share the promotions available for you right now.`,
+    `Hey ${name}, this is Chris with Genesis Health. I wanted to check what state you're in to see what promotions we have running for you right now.`,
+    `Hey ${name}, this is Chris with Genesis Health. Wanted to check what state you're located in so I can share the promotions available for you right now.`,
   ]);
 }
 
 /**
  * The 6-day check-in — fired once per lead, 6 days after the very first
- * outbound message Lucy ever sent them (see lead-checkin.service.ts), 24/7,
+ * outbound message Chris ever sent them (see lead-checkin.service.ts), 24/7,
  * no monitored-hours window. Fixed template, not AI-drafted, same reasoning
  * as the openers above. Which variant fires depends on the conversation's
  * currentlyTaking slot at send time: still unanswered -> ask directly;
  * already answered (yes or no) -> a re-engagement question instead, since
  * asking the same thing twice would be redundant. No self-introduction here
  * either — same reasoning as provider_check_in above — this is still the
- * same phone thread Joy already introduced herself in, even six days later.
+ * same phone thread Chris already introduced herself in, even six days later.
  */
 export function renderCurrentlyTakingCheckin(firstName: string): string {
   const name = firstName.trim() || "there";

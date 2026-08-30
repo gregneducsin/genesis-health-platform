@@ -90,7 +90,7 @@ export async function handleIntakeLinkClick(rawToken: string): Promise<{ redirec
 
       // A person can have more than one intake link minted for them over
       // time (a new one goes out every time an abandoned-cart/meta-lead
-      // trigger fires again, or Lucy sends another one mid-conversation) —
+      // trigger fires again, or Chris sends another one mid-conversation) —
       // nothing stops an earlier link, from a previous nudge, from still
       // being clickable when a newer one goes out. If they click an old one
       // after already having a newer chain armed (or click two different

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, customersTable } from "@luma/db";
-import { runLucyTurn, type LucyTurnResult } from "./lucy-conversation.service.js";
+import { runChrisTurn, type ChrisTurnResult } from "./chris-conversation.service.js";
 import {
   getOrCreateConversation,
   listMessages,
@@ -25,7 +25,7 @@ async function getCustomerContact(personId: string): Promise<{ firstName: string
 /**
  * Sends a text through the SMS provider and logs it in the conversation
  * regardless of whether the send succeeds — a send failure (most likely: no
- * provider configured yet) doesn't erase the fact that this is what Lucy's
+ * provider configured yet) doesn't erase the fact that this is what Chris's
  * guardrail-approved reply actually was. Failures are logged, not thrown;
  * this function never blocks the caller on a transport problem.
  *
@@ -36,7 +36,7 @@ async function getCustomerContact(personId: string): Promise<{ firstName: string
  */
 async function sendAndLog(personId: string, conversationId: string, phone: string | null, text: string): Promise<void> {
   if (await isCustomerSmsDnd(personId)) {
-    logger.warn({ personId, conversationId }, "outbound Lucy message not sent: customer is do-not-disturb");
+    logger.warn({ personId, conversationId }, "outbound Chris message not sent: customer is do-not-disturb");
     return;
   }
 
@@ -46,17 +46,17 @@ async function sendAndLog(personId: string, conversationId: string, phone: strin
       const result = await getSmsProvider().sendMessage(phone, text);
       providerMessageId = result.providerMessageId;
     } catch (err) {
-      logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "outbound Lucy message send failed");
+      logger.warn({ conversationId, reason: err instanceof Error ? err.message : String(err) }, "outbound Chris message send failed");
     }
   } else {
-    logger.warn({ conversationId }, "outbound Lucy message not sent: no phone number on file");
+    logger.warn({ conversationId }, "outbound Chris message not sent: no phone number on file");
   }
   await appendMessage(conversationId, "outbound", text, { providerMessageId });
 }
 
 /**
  * Full inbound-turn pipeline: persist the inbound message, run it through
- * the guardrail loop, tag its sentiment, send (and log) whatever Lucy's
+ * the guardrail loop, tag its sentiment, send (and log) whatever Chris's
  * validated reply is, and persist the updated conversation state. This is
  * the real dispatch path — it calls the SMS provider for real, same as the
  * follow-up pipeline, and fails the same way (cleanly, loudly, not silently)
@@ -75,11 +75,11 @@ export async function processInboundMessage(
   personId: string,
   inboundBody: string,
   initialLeadSource?: "abandoned_cart" | "meta_form",
-): Promise<LucyTurnResult> {
+): Promise<ChrisTurnResult> {
   return withPersonLock(personId, () => processInboundMessageLocked(personId, inboundBody, initialLeadSource));
 }
 
-async function processInboundMessageLocked(personId: string, inboundBody: string, initialLeadSource?: "abandoned_cart" | "meta_form"): Promise<LucyTurnResult> {
+async function processInboundMessageLocked(personId: string, inboundBody: string, initialLeadSource?: "abandoned_cart" | "meta_form"): Promise<ChrisTurnResult> {
   const conversation = initialLeadSource ? await getOrCreateConversation(personId, initialLeadSource) : await getOrCreateConversation(personId);
   const priorMessages = await listMessages(conversation.id);
   const inboundMessage = await appendMessage(conversation.id, "inbound", inboundBody);
@@ -91,23 +91,23 @@ async function processInboundMessageLocked(personId: string, inboundBody: string
   const customerFirstName = customer && customer.firstName && customer.firstName !== "Unknown" ? customer.firstName : null;
 
   const body = toBotPreviewBody(conversation, [...priorMessages, inboundMessage], customerFirstName);
-  let result: LucyTurnResult;
+  let result: ChrisTurnResult;
   try {
-    result = await runLucyTurn(personId, body);
+    result = await runChrisTurn(personId, body);
   } catch (err) {
-    // Anything that escapes runLucyTurn itself (e.g. a DB failure minting the
-    // intake link on send_form) isn't a guardrail rejection — runLucyTurn
+    // Anything that escapes runChrisTurn itself (e.g. a DB failure minting the
+    // intake link on send_form) isn't a guardrail rejection — runChrisTurn
     // only turns ProviderError into a result, everything else propagates.
     // The customer still got silence, though, so this needs the same "a
     // human should see that" treatment as the !result.ok branch below, not
     // a log line nobody's watching.
-    logger.error({ personId, conversationId: conversation.id, reason: err instanceof Error ? err.message : String(err) }, "Lucy turn threw unexpectedly — no outbound message sent");
+    logger.error({ personId, conversationId: conversation.id, reason: err instanceof Error ? err.message : String(err) }, "Chris turn threw unexpectedly — no outbound message sent");
     await updateConversationState(conversation.id, { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "exception" }) });
     return { ok: false, code: "UNEXPECTED_ERROR" };
   }
 
   if (!result.ok) {
-    logger.warn({ personId, conversationId: conversation.id, code: result.code }, "Lucy turn rejected — no outbound message sent");
+    logger.warn({ personId, conversationId: conversation.id, code: result.code }, "Chris turn rejected — no outbound message sent");
     // The customer got silence, not just a routed reply — that's exactly the
     // kind of thing a human should see, not just a log line.
     await updateConversationState(conversation.id, { needsAttention: true, needsAttentionReason: describeNeedsAttentionReason({ kind: "rejected", code: result.code }) });

@@ -127,7 +127,7 @@ export async function listMessages(conversationId: string, limit = MAX_HISTORY_M
   return rows.reverse();
 }
 
-/** Builds the shape runLucyTurn expects from persisted conversation state + recent history. */
+/** Builds the shape runChrisTurn expects from persisted conversation state + recent history. */
 export function toBotPreviewBody(conversation: Conversation, history: readonly ConversationMessage[], customerFirstName: string | null): BotPreviewRequestBody {
   return {
     messages: history.map((m) => ({ direction: m.direction, body: m.body })),
@@ -262,7 +262,7 @@ export type StaffReplyResult = { readonly sent: true } | { readonly sent: false;
 
 /**
  * A human-authored reply to an SMS conversation — logs the message
- * regardless of send outcome (same fail-soft reasoning as lucy-dispatch.service.ts's
+ * regardless of send outcome (same fail-soft reasoning as chris-dispatch.service.ts's
  * sendAndLog), only clears needsAttention on an actual successful send.
  */
 export async function sendStaffReply(conversationId: string, body: string, staffEmail: string): Promise<StaffReplyResult> {

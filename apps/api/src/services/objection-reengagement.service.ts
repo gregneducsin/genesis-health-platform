@@ -18,7 +18,7 @@ const RETRY_COOLDOWN_MS = 30 * 60 * 1000;
 /**
  * Arms a one-time, 2-weeks-out re-engagement text for a lead whose "not
  * ready yet" hesitation just reached STAND_DOWN on the think_about_it
- * objection (see lucy-dispatch.service.ts / lucy-email-dispatch.service.ts,
+ * objection (see chris-dispatch.service.ts / chris-email-dispatch.service.ts,
  * and the standDown comment on think_about_it in objection-handling.ts).
  * "No problem, I'll leave it here for whenever you're ready" shouldn't mean
  * the outreach actually stops forever — this is that follow-through.

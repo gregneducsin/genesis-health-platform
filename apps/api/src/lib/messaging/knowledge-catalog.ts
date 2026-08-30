@@ -6,8 +6,8 @@
  * this catalog — any response that cites a topic not in the permitted set is
  * rejected by the post-check (UNKNOWN_KNOWLEDGE_TOPIC).
  *
- * All entries marked lucySourceVersion: "lucy-knowledge-v1" are derived from
- * the immutable source document stored in lucy-knowledge-source.ts, which was
+ * All entries marked chrisSourceVersion: "chris-knowledge-v1" are derived from
+ * the immutable source document stored in chris-knowledge-source.ts, which was
  * approved by medical staff and legal counsel. Their legalStatus, pricing,
  * clinical statements, and approved response examples must remain consistent
  * with that source document.
@@ -36,10 +36,10 @@ export interface KnowledgeTopic {
   /** Whether this topic is passed to Claude during the preview session. */
   readonly enabledForPreview: boolean;
   /**
-   * Version of the Lucy knowledge source document this entry is derived from.
-   * Undefined for entries not yet sourced from the Lucy document.
+   * Version of the Chris knowledge source document this entry is derived from.
+   * Undefined for entries not yet sourced from the Chris document.
    */
-  readonly lucySourceVersion?: string;
+  readonly chrisSourceVersion?: string;
 }
 
 /**
@@ -56,8 +56,8 @@ export interface KnowledgeTopic {
 export const APPROVED_REVIEW_URLS = new Set<string>([]);
 
 /**
- * The fixed approved patient-portal login URL — the Sarah/Lisa equivalent of
- * APPROVED_REVIEW_URLS. Lisa may output this verbatim; Joy never does.
+ * The fixed approved patient-portal login URL — the Mia equivalent of
+ * APPROVED_REVIEW_URLS. Mia may output this verbatim; Chris never does.
  * Declared here (above KNOWLEDGE_CATALOG) so portal_help's approvedText
  * below can reference it directly instead of duplicating the URL — a
  * duplicate is exactly how the old hardcoded Luma portal link in this same
@@ -67,7 +67,7 @@ export const APPROVED_PORTAL_URL = "https://patient.trygenesis.com/login";
 
 export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   // ── Product comparison ─────────────────────────────────────────────────────
-  // Source: lucy-knowledge-v1 §MEDICATIONS OFFERED, §COMPARING TIRZEPATIDE AND SEMAGLUTIDE
+  // Source: chris-knowledge-v1 §MEDICATIONS OFFERED, §COMPARING TIRZEPATIDE AND SEMAGLUTIDE
   // Key rule from source: customer chooses the medication — do NOT imply the
   // provider chooses between semaglutide and tirzepatide.
   {
@@ -84,7 +84,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    chrisSourceVersion: "chris-knowledge-v1",
     prohibitedClaims: [
       "provider_chooses_medication",
       "personal_effectiveness_guarantee",
@@ -100,16 +100,16 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
 
   // ── Semaglutide pricing ────────────────────────────────────────────────────
   // Source: Genesis Health transparent-pricing page (owner-supplied 2026-08-17).
-  // Exact prices: $175/mo (month-to-month), $116.67/mo ($350 total, 3-mo, save $175),
-  // $108.33/mo ($650 total, 6-mo, save $400), $91.67/mo ($1,100 total, 12-mo, save $1,000)
+  // Exact prices: $175/mo (month-to-month), $117/mo ($350 total, 3-mo, save $175),
+  // $108/mo ($650 total, 6-mo, save $400), $92/mo ($1,100 total, 12-mo, save $1,000)
   {
     key: "semaglutide_pricing",
     approvedText:
       "Semaglutide pricing: " +
       "Month-to-month: $175 per month, no commitment. " +
-      "3-month plan: $116.67 per month, $350 billed every 3 months (save $175 vs. month-to-month). " +
-      "6-month plan: $108.33 per month, $650 billed every 6 months (save $400 vs. month-to-month). " +
-      "12-month plan: $91.67 per month, $1,100 billed annually (save $1,000 vs. month-to-month). " +
+      "3-month plan: $117 per month, $350 billed every 3 months (save $175 vs. month-to-month). " +
+      "6-month plan: $108 per month, $650 billed every 6 months (save $400 vs. month-to-month). " +
+      "12-month plan: $92 per month, $1,100 billed annually (save $1,000 vs. month-to-month). " +
       "When quoting a multi-month plan, clearly state both the monthly equivalent and the total plan price. " +
       "Never quote prices, discounts, promotions, coupon codes, or membership rates outside these amounts.",
     allowedParaphrase: true,
@@ -132,14 +132,14 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
 
   // ── Tirzepatide pricing ────────────────────────────────────────────────────
   // Source: Genesis Health transparent-pricing page (owner-supplied 2026-08-17).
-  // Exact prices: $225/mo (month-to-month), $188.33/mo ($565 total, 3-mo, save $110),
+  // Exact prices: $225/mo (month-to-month), $188/mo ($565 total, 3-mo, save $110),
   // $175/mo ($1,050 total, 6-mo, save $300), $125/mo ($1,500 total, 12-mo, save $1,200)
   {
     key: "tirzepatide_pricing",
     approvedText:
       "Tirzepatide pricing: " +
       "Month-to-month: $225 per month, no commitment. " +
-      "3-month plan: $188.33 per month, $565 billed every 3 months (save $110 vs. month-to-month). " +
+      "3-month plan: $188 per month, $565 billed every 3 months (save $110 vs. month-to-month). " +
       "6-month plan: $175 per month, $1,050 billed every 6 months (save $300 vs. month-to-month). " +
       "12-month plan: $125 per month, $1,500 billed annually (save $1,200 vs. month-to-month). " +
       "When quoting a multi-month plan, clearly state both the monthly equivalent and the total plan price. " +
@@ -163,7 +163,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── Titration / dose progression ──────────────────────────────────────────
-  // Source: lucy-knowledge-v1 §TITRATION
+  // Source: chris-knowledge-v1 §TITRATION
   {
     key: "titration",
     approvedText:
@@ -178,7 +178,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    chrisSourceVersion: "chris-knowledge-v1",
     prohibitedClaims: [
       "independent_dose_change",
       "guaranteed_dose_approval",
@@ -189,7 +189,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── Previous prescriptions (transfer patients) ────────────────────────────
-  // Source: lucy-knowledge-v1 §PREVIOUS PRESCRIPTIONS
+  // Source: chris-knowledge-v1 §PREVIOUS PRESCRIPTIONS
   {
     key: "previous_prescriptions",
     approvedText:
@@ -203,7 +203,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    chrisSourceVersion: "chris-knowledge-v1",
     prohibitedClaims: [
       "guaranteed_dose_continuation",
       "guaranteed_prescription_approval",
@@ -214,7 +214,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── Weight-loss expectations ───────────────────────────────────────────────
-  // Source: lucy-knowledge-v1 §TIRZEPATIDE, §WEIGHT-LOSS EXPECTATIONS
+  // Source: chris-knowledge-v1 §TIRZEPATIDE, §WEIGHT-LOSS EXPECTATIONS
   {
     key: "weight_loss_expectations",
     approvedText:
@@ -228,7 +228,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    chrisSourceVersion: "chris-knowledge-v1",
     prohibitedClaims: [
       "guaranteed_weight_loss",
       "personal_weight_loss_prediction",
@@ -241,10 +241,10 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   // ── Medication onset timing ─────────────────────────────────────────────────
   // Source: owner-confirmed 2026-08-20. General onset-timing education only —
   // never a personalized prediction of when any one customer will notice
-  // changes. Sarah-only: excluded from Lucy via LUCY_EXCLUDED_TOPIC_KEYS below
+  // changes. Mia-only: excluded from Chris via CHRIS_EXCLUDED_TOPIC_KEYS below
   // — this is a question an existing patient already taking the medication
-  // asks, not a prospect. Wording deliberately avoids "dose"/"dosing" — Sarah's
-  // own post-check (lib/support/safety.ts's SARAH_PROHIBITED_CLINICAL_RE)
+  // asks, not a prospect. Wording deliberately avoids "dose"/"dosing" — Mia's
+  // own post-check (lib/support/safety.ts's MIA_PROHIBITED_CLINICAL_RE)
   // unconditionally rejects those words in her reply, no topic-gate exception,
   // so the approved text itself has to stay inside that vocabulary.
   {
@@ -262,7 +262,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
 
   // ── Appetite / still feeling hungry ────────────────────────────────────────
   // Source: owner-confirmed 2026-08-20. General, non-personalized coping tips
-  // only — never tells a customer to change their own dose. Sarah-only, same
+  // only — never tells a customer to change their own dose. Mia-only, same
   // reasoning and same "dose"-free wording constraint as
   // medication_onset_timeline above.
   {
@@ -280,7 +280,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── Insurance and payment options ─────────────────────────────────────────
-  // Source: lucy-knowledge-v1 §INSURANCE AND PAYMENT OPTIONS
+  // Source: chris-knowledge-v1 §INSURANCE AND PAYMENT OPTIONS
   {
     key: "insurance_payment",
     approvedText:
@@ -292,13 +292,13 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    chrisSourceVersion: "chris-knowledge-v1",
     prohibitedClaims: ["insurance_acceptance", "financing_approval_guarantee", "payment_plan_guarantee"],
     enabledForPreview: true,
   },
 
   // ── How the program works / enrollment ────────────────────────────────────
-  // Source: lucy-knowledge-v1 §MEDICAL QUESTIONNAIRE AND ENROLLMENT
+  // Source: chris-knowledge-v1 §MEDICAL QUESTIONNAIRE AND ENROLLMENT
   {
     key: "how_luma_works",
     approvedText:
@@ -313,7 +313,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    chrisSourceVersion: "chris-knowledge-v1",
     prohibitedClaims: [
       "guaranteed_approval_timing",
       "guaranteed_delivery_speed",
@@ -325,14 +325,14 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── How it works, for a patient who already purchased ──────────────────────
-  // Sarah's own version of how_luma_works above. That topic is written for a
+  // Mia's own version of how_luma_works above. That topic is written for a
   // prospect who hasn't signed up yet ("you select your plan... complete the
   // questionnaire... guide the customer toward completing the questionnaire")
-  // — every sentence of it is wrong for a patient Sarah is talking to, who has
+  // — every sentence of it is wrong for a patient Mia is talking to, who has
   // already done all of that. This describes the same underlying process
   // (medical review -> prescription -> pharmacy -> shipping) from "what
   // happens after you've ordered" instead, using only facts already approved
-  // elsewhere for Sarah (see lib/support/templates.ts's fixed status
+  // elsewhere for Mia (see lib/support/templates.ts's fixed status
   // messages) — no new claims, just the appropriate framing for the audience.
   {
     key: "how_luma_works_after_purchase",
@@ -349,8 +349,8 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── Plan inclusions ────────────────────────────────────────────────────────
-  // STATUS: EXCLUDED from lucy-knowledge-v1 itself, but separately owner-
-  // confirmed approved for Lucy's use — see legalStatus/enabledForPreview below.
+  // STATUS: EXCLUDED from chris-knowledge-v1 itself, but separately owner-
+  // confirmed approved for Chris's use — see legalStatus/enabledForPreview below.
   {
     key: "plan_inclusions",
     approvedText:
@@ -409,7 +409,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    chrisSourceVersion: "chris-knowledge-v1",
     prohibitedClaims: [
       "instant_cancellation", // portal processing takes effect before the 7-day window
       "cancellation_fee_refund", // no refunds are promised
@@ -421,7 +421,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── Side effects (tolerability) ───────────────────────────────────────────
-  // Source: lucy-knowledge-v1 §COMPARING TIRZEPATIDE AND SEMAGLUTIDE
+  // Source: chris-knowledge-v1 §COMPARING TIRZEPATIDE AND SEMAGLUTIDE
   // Approved script: acknowledge GI side effects exist, vary per person, and
   // invite the customer to share which medication they are considering.
   // Individualized assessment (personal history / symptoms) must still go to
@@ -436,7 +436,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-knowledge-v1",
+    chrisSourceVersion: "chris-knowledge-v1",
     prohibitedClaims: [
       "fewer_side_effects_guarantee", // never claim one med has universally fewer SE
       "personalized_side_effect_assessment", // no individualized medical judgment
@@ -450,7 +450,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   // Source: owner-confirmed — typically 2-3 business days after approval.
   // No-signature-required added 2026-08-23, ported from Luma after a real
   // patient (Charlotte Hunt) asked whether she needed to be home for
-  // delivery — Sarah had no approved fact to answer with and correctly
+  // delivery — Mia had no approved fact to answer with and correctly
   // stayed vague rather than guess, which flagged the conversation for
   // staff instead of just answering. Owner confirmed no signature is
   // ever required.
@@ -517,9 +517,9 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
     prohibitedClaims: [
-      "guaranteed_eligibility", // provider determines eligibility, not Lucy
+      "guaranteed_eligibility", // provider determines eligibility, not Chris
       "specific_bmi_cutoff_as_guarantee", // BMI is one factor; do not state a specific cutoff as a guarantee
-      "pre_screening_eligibility", // Lucy cannot pre-screen
+      "pre_screening_eligibility", // Chris cannot pre-screen
       "automatic_approval", // provider review is required
     ],
     enabledForPreview: true,
@@ -589,7 +589,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
   },
 
   // ── First month offer ──────────────────────────────────────────────────────
-  // SOURCE: lucy-promotion-v1 (separately versioned; not part of lucy-knowledge-v1).
+  // SOURCE: chris-promotion-v1 (separately versioned; not part of chris-knowledge-v1).
   // Approved by the owner who attested that medical staff and legal reviewed the terms.
   // approvedAt: null — owner has not supplied an explicit approval date.
   {
@@ -601,7 +601,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     legalStatus: "approved",
     clinicalStatus: "approved",
     lastReviewedDate: "2026-08-15",
-    lucySourceVersion: "lucy-promotion-v1",
+    chrisSourceVersion: "chris-promotion-v1",
     prohibitedClaims: [
       "eligibility_after_prior_purchase", // discount applies to new customers only
       "stackable_promotions", // cannot be combined with another promotion
@@ -613,7 +613,7 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
     enabledForPreview: true,
   },
   // ── Patient portal ─────────────────────────────────────────────────────────
-  // Source: owner-confirmed patient login URL. Sarah-only topic — Lucy has no
+  // Source: owner-confirmed patient login URL. Mia-only topic — Chris has no
   // reason to send an existing-customer portal link to a prospect.
   {
     key: "portal_help",
@@ -630,35 +630,35 @@ export const KNOWLEDGE_CATALOG: readonly KnowledgeTopic[] = [
 ] as const;
 
 /**
- * Topic keys explicitly marked Sarah-only in their catalog entry's comment —
- * excluded from Lucy's topic list even though enabledForPreview is true.
+ * Topic keys explicitly marked Mia-only in their catalog entry's comment —
+ * excluded from Chris's topic list even though enabledForPreview is true.
  *
- * portal_help: Lucy has no legitimate use for a patient-portal login link
+ * portal_help: Chris has no legitimate use for a patient-portal login link
  * aimed at a prospect who hasn't purchased and has no account to log into.
- * (Lucy's URL allowlist would also reject the literal link if Claude tried
+ * (Chris's URL allowlist would also reject the literal link if Claude tried
  * to output it, but that shouldn't be the only thing stopping her from
  * citing/paraphrasing the topic in the first place.)
  *
  * how_luma_works_after_purchase: written entirely from "after your order
  * comes in..." — premature and wrong for a prospect who hasn't ordered yet.
- * Lucy has her own pre-purchase version, how_luma_works.
+ * Chris has her own pre-purchase version, how_luma_works.
  *
  * medication_onset_timeline and appetite_hunger_management: both are
  * questions an existing patient already taking the medication asks, not a
  * prospect deciding whether to sign up — see each topic's own comment.
  */
-const LUCY_EXCLUDED_TOPIC_KEYS = new Set(["portal_help", "how_luma_works_after_purchase", "medication_onset_timeline", "appetite_hunger_management"]);
+const CHRIS_EXCLUDED_TOPIC_KEYS = new Set(["portal_help", "how_luma_works_after_purchase", "medication_onset_timeline", "appetite_hunger_management"]);
 
 /** All topics available for the development bot-test preview. */
 export function getPreviewEnabledTopics(): readonly KnowledgeTopic[] {
-  return KNOWLEDGE_CATALOG.filter((t) => t.enabledForPreview && !LUCY_EXCLUDED_TOPIC_KEYS.has(t.key));
+  return KNOWLEDGE_CATALOG.filter((t) => t.enabledForPreview && !CHRIS_EXCLUDED_TOPIC_KEYS.has(t.key));
 }
 
 /**
- * Direct "write a review" deep link — Sarah-only, used specifically in the
+ * Direct "write a review" deep link — Mia-only, used specifically in the
  * post-delivery review-request flow when the patient's sentiment is
  * positive. Distinct from APPROVED_REVIEW_URLS (the two general
- * read-reviews pages Lucy and Sarah both may share when asked about
+ * read-reviews pages Chris and Mia both may share when asked about
  * reviews generally): this one is for actually asking someone to submit a
  * review, so it goes straight to the write-a-review form, not an overview page.
  *
@@ -670,17 +670,17 @@ export function getPreviewEnabledTopics(): readonly KnowledgeTopic[] {
 export const APPROVED_REVIEW_WRITE_URL = "";
 
 /**
- * Topic keys Sarah (the post-purchase support bot) is allowed to use — a
- * subset of the same catalog Lucy draws from, reused verbatim rather than
+ * Topic keys Mia (the post-purchase support bot) is allowed to use — a
+ * subset of the same catalog Chris draws from, reused verbatim rather than
  * duplicated. Deliberately excludes every pre-purchase/sales/clinical topic
  * (product_comparison, pricing, titration, previous_prescriptions, weight
- * loss expectations, side_effects, eligibility, first_month_offer) — Sarah's
+ * loss expectations, side_effects, eligibility, first_month_offer) — Mia's
  * whole domain is post-purchase customer service with zero individualized
  * clinical content; anything clinical routes to staff.
  *
  * compounded_medication is the one narrow exception: it's general product
  * information (compounded vs. brand-name, same active ingredient), not
- * individualized clinical guidance, so Sarah may use it when a patient asks
+ * individualized clinical guidance, so Mia may use it when a patient asks
  * how their medication compares to a brand name (semaglutide/Ozempic/Wegovy,
  * tirzepatide/Mounjaro/Zepbound) — see the topic-gated rule in
  * lib/support/safety.ts.
@@ -688,17 +688,17 @@ export const APPROVED_REVIEW_WRITE_URL = "";
  * medication_onset_timeline and appetite_hunger_management are the other two
  * exceptions, for the same reason: general, non-personalized education (when
  * effects typically start, coping with residual hunger) that an existing
- * patient legitimately asks Sarah, not individualized clinical guidance.
+ * patient legitimately asks Mia, not individualized clinical guidance.
  * Both are worded to avoid "dose"/"mg"/"side effect" — see each topic's own
- * comment for why: Sarah's SARAH_PROHIBITED_CLINICAL_RE rejects those words
+ * comment for why: Mia's MIA_PROHIBITED_CLINICAL_RE rejects those words
  * in her reply unconditionally, with no topic-gate exception.
  *
  * how_luma_works_after_purchase, not how_luma_works: the latter is written
  * entirely for a prospect who hasn't signed up yet (select a plan, complete
- * the questionnaire) — wrong framing for every patient Sarah talks to, who's
+ * the questionnaire) — wrong framing for every patient Mia talks to, who's
  * already done that. See how_luma_works_after_purchase's own comment above.
  */
-export const SARAH_TOPIC_KEYS = new Set([
+export const MIA_TOPIC_KEYS = new Set([
   "insurance_payment",
   "how_luma_works_after_purchase",
   // customer_reviews intentionally omitted — disabled (enabledForPreview:
@@ -713,9 +713,9 @@ export const SARAH_TOPIC_KEYS = new Set([
   "appetite_hunger_management",
 ]);
 
-/** Topics available to Sarah's conversation loop. */
-export function getSarahEnabledTopics(): readonly KnowledgeTopic[] {
-  return KNOWLEDGE_CATALOG.filter((t) => t.enabledForPreview && SARAH_TOPIC_KEYS.has(t.key));
+/** Topics available to Mia's conversation loop. */
+export function getMiaEnabledTopics(): readonly KnowledgeTopic[] {
+  return KNOWLEDGE_CATALOG.filter((t) => t.enabledForPreview && MIA_TOPIC_KEYS.has(t.key));
 }
 
 /** Look up a topic by its key. Returns undefined when not found. */
@@ -736,23 +736,23 @@ export const PRODUCT_PRICING_TOPIC_KEYS = new Set(["semaglutide_pricing", "tirze
 export const APPROVED_PRICING_TOPIC_KEYS = new Set(["semaglutide_pricing", "tirzepatide_pricing", "first_month_offer"]);
 
 /**
- * Topic keys derived from the lucy-promotion-v1 approved promotion entry.
- * These are separately versioned from lucy-knowledge-v1.
+ * Topic keys derived from the chris-promotion-v1 approved promotion entry.
+ * These are separately versioned from chris-knowledge-v1.
  */
-export const LUCY_PROMOTION_V1_TOPIC_KEYS = new Set(["first_month_offer"]);
+export const CHRIS_PROMOTION_V1_TOPIC_KEYS = new Set(["first_month_offer"]);
 
 /**
- * Topic keys derived from the lucy-knowledge-v1 source document.
- * These entries must remain consistent with lucy-knowledge-source.ts.
+ * Topic keys derived from the chris-knowledge-v1 source document.
+ * These entries must remain consistent with chris-knowledge-source.ts.
  *
  * semaglutide_pricing and tirzepatide_pricing are deliberately NOT in this
  * set — this fork (Genesis Health) has its own separately-approved pricing
- * (see the topics' own comments), no longer sourced from lucy-knowledge-v1,
+ * (see the topics' own comments), no longer sourced from chris-knowledge-v1,
  * so they're exempt from the integrity checks that pin every member of this
  * set to that specific document. customer_reviews is also excluded — see
  * its comment; this brand doesn't offer review links (yet).
  */
-export const LUCY_V1_TOPIC_KEYS = new Set([
+export const CHRIS_V1_TOPIC_KEYS = new Set([
   "product_comparison",
   "titration",
   "previous_prescriptions",

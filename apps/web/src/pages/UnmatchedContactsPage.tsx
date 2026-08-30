@@ -173,12 +173,12 @@ function ThreadRow({
           {thread.linkedCustomerId && (
             <div className="mx-4 rounded-md bg-green-50 px-3 py-2">
               <p className="text-xs text-green-800">
-                A new lead was created for this sender, and this message was handed straight to Joy's real pipeline — she's already replied. See{" "}
+                A new lead was created for this sender, and this message was handed straight to Chris's real pipeline — she's already replied. See{" "}
                 <a href={`/customers/${thread.linkedCustomerId}`} className="font-medium underline">
                   their customer record
                 </a>{" "}
                 or the Conversations tab for that reply. Every {thread.channel === "email" ? "email" : "text"} from this {thread.channel === "email" ? "address" : "number"} from now on
-                routes through Joy automatically, same as any other lead.
+                routes through Chris automatically, same as any other lead.
               </p>
             </div>
           )}
@@ -318,7 +318,7 @@ export function UnmatchedContactsPage() {
         review when Claude flags genuine uncertainty (or an individualized medical/suitability question), or when the sender looks like a
         possible match to an existing customer, or claims to already have an account — those never auto-link or auto-send. Once a name and,
         for texts, a real-looking email are known and Claude is confident it's a genuine new lead, a lead is created automatically and the
-        message is handed straight to Joy's real pipeline — she takes it from there, same as any other lead.
+        message is handed straight to Chris's real pipeline — she takes it from there, same as any other lead.
       </p>
 
       {isLoading && <p className="text-sm text-gray-400">Loading…</p>}

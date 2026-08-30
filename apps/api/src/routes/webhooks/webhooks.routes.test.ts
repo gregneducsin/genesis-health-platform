@@ -458,32 +458,32 @@ describe("Webhooks", () => {
       expect(purchase.ecommerceOrderId).toBe("txn-abc-123");
     });
 
-    it("fires Sarah's order-received opener instantly", async () => {
+    it("fires Mia's order-received opener instantly", async () => {
       sendMessageMock.mockClear();
-      sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_sarah_opener" });
+      sendMessageMock.mockResolvedValueOnce({ providerMessageId: "msg_mia_opener" });
 
       const res = await request(app)
         .post("/api/webhooks/bask-order")
         .set("x-webhook-secret", ORDER_SECRET)
         .send({
-          eventId: "bask-order-evt-sarah-opener",
-          externalPersonId: "bask-person-sarah-opener",
-          email: "sarah-opener@example.com",
+          eventId: "bask-order-evt-mia-opener",
+          externalPersonId: "bask-person-mia-opener",
+          email: "mia-opener@example.com",
           firstName: "Opener",
           lastName: "Test",
           phone: "+15551110099",
-          orderId: "BASK-SARAH-1",
+          orderId: "BASK-MIA-1",
           productName: "Program",
           amountPaid: 120,
           purchasedAt: "2026-02-07T09:00:00.000Z",
         });
       expect(res.status).toBe(200);
 
-      expect(sendMessageMock).toHaveBeenCalledWith("+15551110099", expect.stringContaining("this is Lisa"));
+      expect(sendMessageMock).toHaveBeenCalledWith("+15551110099", expect.stringContaining("this is Mia"));
 
       const { db, customersTable } = await import("@luma/db");
       const { eq } = await import("drizzle-orm");
-      const [customer] = await db.select().from(customersTable).where(eq(customersTable.email, "sarah-opener@example.com"));
+      const [customer] = await db.select().from(customersTable).where(eq(customersTable.email, "mia-opener@example.com"));
       const { getOrCreateSupportConversation, listSupportMessages } = await import("../../services/support-conversations.service.js");
       const conversation = await getOrCreateSupportConversation(customer!.id);
       const messages = await listSupportMessages(conversation.id);
@@ -515,7 +515,7 @@ describe("Webhooks", () => {
         });
       expect(first.status).toBe(200);
       expect(sendMessageMock).toHaveBeenCalledTimes(1);
-      expect(sendMessageMock.mock.calls[0][1]).toContain("this is Lisa");
+      expect(sendMessageMock.mock.calls[0][1]).toContain("this is Mia");
       expect(sendMessageMock.mock.calls[0][1]).not.toContain("refill");
 
       sendMessageMock.mockClear();
@@ -575,7 +575,7 @@ describe("Webhooks", () => {
 
       expect(await isCustomerSmsDnd(customer!.id)).toBe(false);
       expect(await isCustomerEmailDnd(customer!.id)).toBe(false);
-      expect(sendMessageMock).toHaveBeenCalledWith("+15551110098", expect.stringContaining("this is Lisa"));
+      expect(sendMessageMock).toHaveBeenCalledWith("+15551110098", expect.stringContaining("this is Mia"));
     });
   });
 

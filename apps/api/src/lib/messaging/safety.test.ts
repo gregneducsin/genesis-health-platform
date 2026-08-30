@@ -99,7 +99,7 @@ describe("interactivePreCheck", () => {
     expect(interactivePreCheck("How long does shipping take?")).toEqual({ blocked: false });
   });
 
-  it("still blocks onset-timing questions — medication_onset_timeline is Sarah-only, Lucy has no approved answer for a lead", () => {
+  it("still blocks onset-timing questions — medication_onset_timeline is Mia-only, Chris has no approved answer for a lead", () => {
     expect(interactivePreCheck("How long until my medication starts working?")).toEqual({ blocked: true, code: "MEDICAL_CONTENT" });
     expect(interactivePreCheck("When will I start seeing results?")).toEqual({ blocked: false }); // no MEDICAL_WORDS_LOWER term present at all
   });
@@ -109,7 +109,7 @@ describe("interactivePreCheck", () => {
   });
 
   it("does not block a short reply that's just naming which of our own topics the customer wants, when it directly answers a question we just asked", () => {
-    // Real production case: Lucy asked "is there something specific about
+    // Real production case: Chris asked "is there something specific about
     // the process you'd like me to go over?" and the customer answered
     // "Medication and plans" — not an unprompted medical question at all.
     expect(interactivePreCheck("Medication and plans", "Is there something specific about the process you'd like me to go over?")).toEqual({ blocked: false });
@@ -255,7 +255,7 @@ describe("interactivePostCheck: URLs", () => {
     expect(result).toEqual({ ok: false, code: "UNAPPROVED_URL" });
   });
 
-  // No positive "approved URL echoed without scheme" test here — Lucy has
+  // No positive "approved URL echoed without scheme" test here — Chris has
   // zero approved URLs right now (APPROVED_REVIEW_URLS is empty for Genesis
   // Health; see its comment in knowledge-catalog.ts). The schemeless-match
   // mechanism itself is still covered by the equivalent test in
@@ -326,7 +326,7 @@ describe("interactivePostCheck: pricing and financing claims", () => {
   });
 
   it("allows dollar amounts with a pricing topic declared", () => {
-    const result = check(reply({ reply: "That plan is $116.67 per month.", knowledgeTopicsUsed: ["semaglutide_pricing"] }));
+    const result = check(reply({ reply: "That plan is $117 per month.", knowledgeTopicsUsed: ["semaglutide_pricing"] }));
     expect(result.ok).toBe(true);
   });
 
@@ -344,8 +344,8 @@ describe("interactivePostCheck: pricing and financing claims", () => {
 
   it("allows every real approved figure across both products, all plan lengths, and the promo-adjusted month-to-month prices", () => {
     const approvedReplies = [
-      "Semaglutide is $175 a month month-to-month, $116.67 a month ($350 total) for 3 months, $108.33 a month ($650 total) for 6 months, or $91.67 a month ($1,100 total) for 12 months.",
-      "Tirzepatide is $225 a month month-to-month, $188.33 a month ($565 total) for 3 months, $175 a month ($1,050 total) for 6 months, or $125 a month ($1,500 total) for 12 months.",
+      "Semaglutide is $175 a month month-to-month, $117 a month ($350 total) for 3 months, $108 a month ($650 total) for 6 months, or $92 a month ($1,100 total) for 12 months.",
+      "Tirzepatide is $225 a month month-to-month, $188 a month ($565 total) for 3 months, $175 a month ($1,050 total) for 6 months, or $125 a month ($1,500 total) for 12 months.",
       "With $20 off, semaglutide is $155 and tirzepatide is $205 for the first month.",
     ];
     for (const text of approvedReplies) {

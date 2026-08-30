@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, supportConversationsTable, supportConversationMessagesTable, customersTable, type SupportConversation, type SupportConversationMessage } from "@luma/db";
-import type { SarahPreviewRequestBody } from "../lib/support/types.js";
+import type { MiaPreviewRequestBody } from "../lib/support/types.js";
 import { getSmsProvider } from "../lib/sms-provider.js";
 import { logger } from "../lib/logger.js";
 import { notifySlack } from "../lib/slack.js";
@@ -119,8 +119,8 @@ export async function listSupportMessages(conversationId: string, limit = MAX_HI
   return rows.reverse();
 }
 
-/** Builds the shape runSarahTurn expects from persisted conversation state + recent history. */
-export function toSarahPreviewBody(conversation: SupportConversation, history: readonly SupportConversationMessage[]): SarahPreviewRequestBody {
+/** Builds the shape runMiaTurn expects from persisted conversation state + recent history. */
+export function toMiaPreviewBody(conversation: SupportConversation, history: readonly SupportConversationMessage[]): MiaPreviewRequestBody {
   return {
     messages: history.map((m) => ({ direction: m.direction, body: m.body })),
     orderState: {
@@ -194,7 +194,7 @@ export async function getSupportConversationDetail(
 export type StaffReplyResult = { readonly sent: true } | { readonly sent: false; readonly reason: "not_found" | "no_phone" | "send_failed" };
 
 /**
- * A human-authored reply, sent through the same SMS provider Sarah uses and
+ * A human-authored reply, sent through the same SMS provider Mia uses and
  * logged into the same conversation timeline the same way a bot reply is
  * (direction: "outbound") — so the CRM history reads as one continuous
  * conversation regardless of who actually wrote each message. Only clears

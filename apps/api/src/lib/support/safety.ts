@@ -1,9 +1,9 @@
 /**
- * Pre- and post-Claude safety rules for Sarah, the post-purchase support bot.
+ * Pre- and post-Claude safety rules for Mia, the post-purchase support bot.
  *
- * Sarah has almost no approved clinical content. Any patient message asking
+ * Mia has almost no approved clinical content. Any patient message asking
  * about prescription specifics (dose, side effects, "why was I prescribed
- * this") is routed to staff before Sarah ever drafts a reply. Sarah's own
+ * this") is routed to staff before Mia ever drafts a reply. Mia's own
  * replies may reference prescription/order *status* (written, shipped,
  * tracking number) using the plain factual language the order-state context
  * provides — that's not clinical content, it's fulfillment status — but
@@ -14,22 +14,22 @@
  * medication (generic or brand — semaglutide/Ozempic, tirzepatide/Mounjaro/
  * Zepbound) is permitted only when that topic is declared in
  * knowledgeTopicsUsed, for general product-comparison questions a patient
- * raises by name. See SARAH_TOPIC_SPECIFIC_LANGUAGE below.
+ * raises by name. See MIA_TOPIC_SPECIFIC_LANGUAGE below.
  *
  * No database imports. No outbound messaging SDK imports.
  */
 
 import { z } from "zod";
-import type { SarahInteractiveResult } from "./types.js";
+import type { MiaInteractiveResult } from "./types.js";
 import { APPROVED_REVIEW_URLS, APPROVED_PORTAL_URL, APPROVED_REVIEW_WRITE_URL } from "../messaging/knowledge-catalog.js";
 import { stripEmDashes } from "../text-sanitize.js";
 
 // ── Zod schema for structured provider output ─────────────────────────────────
 
-export const SarahInteractiveSchema = z
+export const MiaInteractiveSchema = z
   .object({
     action: z.enum(["reply", "pause", "staff_review", "no_reply"]),
-    // 600, not Lucy's 400 — the review-request flow can legitimately need to
+    // 600, not Chris's 400 — the review-request flow can legitimately need to
     // embed both full approved review URLs (~90 chars alone) plus natural
     // prose in one reply; 400 was observed live to reject valid replies here
     // (a 419-char reply with both URLs + enthusiastic phrasing).
@@ -88,7 +88,7 @@ const LEGAL_SUE_RE = /\bsu(?:e|es|ed|ing)\b/i;
 /**
  * Any question about prescription specifics — dose, medication identity,
  * refill changes, side effects, "is this safe" — routes straight to staff.
- * Sarah has no approved content to answer any of these; unlike Lucy's
+ * Mia has no approved content to answer any of these; unlike Chris's
  * MEDICAL_WORDS_LOWER (which has topic-gated post-check carve-outs), there
  * is deliberately no exception path here.
  */
@@ -124,7 +124,7 @@ const PRESCRIPTION_QUESTION_PHRASES_LOWER = [
   // "is it safe" narrowed to medication-context tails, not the bare phrase —
   // a bare substring also matched non-clinical questions like "is it safe to
   // leave the package on my porch," silently routing an ordinary delivery
-  // question to staff instead of letting Sarah answer it.
+  // question to staff instead of letting Mia answer it.
   "is it safe for me",
   "is it safe to take",
   "is it safe to combine",
@@ -151,7 +151,7 @@ const MG_DOSAGE_RE = /\bmg\b|\d\s?mg\b/i;
  * transit (real production case, ported from Luma: a patient reported "one
  * ice pack, hot to the touch, providing no refrigeration at all"). This is a
  * potential medication-safety issue, not a routine shipping complaint —
- * Sarah has no way to assess whether the medication is still safe to use, so
+ * Mia has no way to assess whether the medication is still safe to use, so
  * this routes straight to staff the same way a prescription question does,
  * rather than falling through to the generic "acknowledge and say the team
  * will follow up" fallback for uncovered topics.
@@ -159,7 +159,7 @@ const MG_DOSAGE_RE = /\bmg\b|\d\s?mg\b/i;
 const COLD_CHAIN_CONCERN_PHRASES_LOWER = ["ice pack", "not refrigerated", "wasn't refrigerated", "no refrigeration", "not cold", "warm to the touch", "hot to the touch", "melted", "spoiled"] as const;
 
 /**
- * A patient asking to pause, hold, or skip their prescription/order. Sarah
+ * A patient asking to pause, hold, or skip their prescription/order. Mia
  * must never confirm a pause has actually happened — she has no way to
  * action it herself, and telling a patient "you're paused" when nothing
  * changed risks them missing a dose or a shipment on the mistaken belief
@@ -221,7 +221,7 @@ export function supportPreCheck(lastInbound: string): SupportPreCheckResult {
  */
 const URL_RE = /(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|org|net|io|co)\b(?:\/[^\s)]*)?/gi;
 
-/** Strips scheme/www/trailing-slash so an approved URL still matches whether or not Sarah echoes its scheme. */
+/** Strips scheme/www/trailing-slash so an approved URL still matches whether or not Mia echoes its scheme. */
 function normalizeUrlForComparison(url: string): string {
   return url
     .toLowerCase()
@@ -234,14 +234,14 @@ const ALLOWED_URLS = new Set([...APPROVED_REVIEW_URLS, APPROVED_PORTAL_URL, APPR
 const ALLOWED_URLS_NORMALIZED = new Set([...ALLOWED_URLS].map(normalizeUrlForComparison));
 
 /**
- * Clinical content in Sarah's OWN reply — always rejected, no exceptions.
+ * Clinical content in Mia's OWN reply — always rejected, no exceptions.
  * These describe individualized clinical judgment (diagnosis, dosing,
- * symptoms, side effects) that Sarah must never produce regardless of which
+ * symptoms, side effects) that Mia must never produce regardless of which
  * topic she's grounded in.
  * "prescription" as a plain status noun ("your prescription was written")
  * is NOT blocked here — only clinical specifics are.
  */
-const SARAH_PROHIBITED_CLINICAL_RE = [
+const MIA_PROHIBITED_CLINICAL_RE = [
   /\bdiagnos(e|is|ed|ing)\b/i,
   // Was verb-only (contraindicated); "contraindication(s)" (the noun form) is
   // an equally common phrasing and was slipping through unblocked.
@@ -260,17 +260,17 @@ const SARAH_PROHIBITED_CLINICAL_RE = [
  *
  * A patient bringing up a brand name ("how is this different from Ozempic")
  * is asking for general product information, not individualized clinical
- * guidance — Sarah may answer using the compounded_medication topic (same
- * approved text Lucy uses). Without that topic declared, naming any
+ * guidance — Mia may answer using the compounded_medication topic (same
+ * approved text Chris uses). Without that topic declared, naming any
  * medication — generic or brand — is still rejected exactly as before.
  */
-interface SarahTopicSpecificRule {
+interface MiaTopicSpecificRule {
   readonly pattern: RegExp;
   readonly requiredTopics: ReadonlySet<string>;
   readonly code: "PROHIBITED_CLINICAL";
 }
 
-const SARAH_TOPIC_SPECIFIC_LANGUAGE: readonly SarahTopicSpecificRule[] = [
+const MIA_TOPIC_SPECIFIC_LANGUAGE: readonly MiaTopicSpecificRule[] = [
   {
     pattern: /\bsemaglutide\b|\btirzepatide\b|\bozempic\b|\bwegovy\b|\bmounjaro\b|\bzepbound\b/i,
     requiredTopics: new Set(["compounded_medication"]),
@@ -288,13 +288,13 @@ function normalizeForComparison(text: string): string {
     .replace(/\s+/g, " ");
 }
 
-export type SupportPostCheckResult = { readonly ok: true; readonly result: SarahInteractiveResult } | { readonly ok: false; readonly code: string };
+export type SupportPostCheckResult = { readonly ok: true; readonly result: MiaInteractiveResult } | { readonly ok: false; readonly code: string };
 
 const REPLY_TYPE_ACTIONS = new Set(["reply"]);
 const NO_QUESTION_ACTIONS = new Set(["pause", "staff_review", "no_reply"]);
 
 /**
- * Validate Sarah's raw provider response.
+ * Validate Mia's raw provider response.
  *
  * Hard rejections (returns ok:false): UNAPPROVED_URL, PROHIBITED_CLINICAL,
  * PROHIBITED_STAFF_CLAIM, REPEATED_DRAFT, LOW_CONFIDENCE,
@@ -302,7 +302,7 @@ const NO_QUESTION_ACTIONS = new Set(["pause", "staff_review", "no_reply"]);
  * QUESTION_MARK_IN_REPLY, UNEXPECTED_NEXT_QUESTION.
  */
 export function supportPostCheck(
-  raw: SarahInteractiveResult,
+  raw: MiaInteractiveResult,
   lastDraft: string | null,
   permittedTopicKeys: ReadonlySet<string> = new Set(),
 ): SupportPostCheckResult {
@@ -327,11 +327,11 @@ export function supportPostCheck(
       return { ok: false, code: "QUESTION_MARK_IN_REPLY" };
     }
 
-    if (SARAH_PROHIBITED_CLINICAL_RE.some((re) => re.test(reply))) {
+    if (MIA_PROHIBITED_CLINICAL_RE.some((re) => re.test(reply))) {
       return { ok: false, code: "PROHIBITED_CLINICAL" };
     }
 
-    for (const rule of SARAH_TOPIC_SPECIFIC_LANGUAGE) {
+    for (const rule of MIA_TOPIC_SPECIFIC_LANGUAGE) {
       if (rule.pattern.test(reply)) {
         const hasRequired = raw.knowledgeTopicsUsed.some((k) => rule.requiredTopics.has(k));
         if (!hasRequired) {
@@ -380,10 +380,10 @@ export function supportPostCheck(
     }
   }
 
-  const effectiveRaw: SarahInteractiveResult =
+  const effectiveRaw: MiaInteractiveResult =
     raw.requiresStaff && raw.action !== "staff_review" ? { ...raw, action: "staff_review", reply: null, nextQuestion: null } : raw;
 
-  const sanitizedRaw: SarahInteractiveResult = {
+  const sanitizedRaw: MiaInteractiveResult = {
     ...effectiveRaw,
     reply: stripEmDashes(effectiveRaw.reply),
     nextQuestion: stripEmDashes(effectiveRaw.nextQuestion),

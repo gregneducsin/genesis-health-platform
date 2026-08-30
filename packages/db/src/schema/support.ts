@@ -2,8 +2,8 @@ import { pgTable, text, uuid, timestamp, boolean, integer, index, uniqueIndex } 
 import { customersTable } from "./customers";
 
 /**
- * One "Sarah" post-purchase support conversation thread per customer (1:1).
- * Separate from the Lucy `conversations` table entirely — different persona,
+ * One "Mia" post-purchase support conversation thread per customer (1:1).
+ * Separate from the Chris `conversations` table entirely — different persona,
  * different tab, different purpose (order/prescription/shipping support for
  * existing customers, not sales outreach to prospects). Fired the moment a
  * Bask order-purchased webhook lands; updated as prescription-written and
@@ -53,7 +53,7 @@ export const supportConversationsTable = pgTable(
 /**
  * Every message in a support conversation, in order. `sentiment` is set on
  * inbound messages only, tagged by the same Claude call that produces
- * Sarah's reply (no separate classification call) — same pattern as
+ * Mia's reply (no separate classification call) — same pattern as
  * conversation_messages.
  */
 export const supportConversationMessagesTable = pgTable(
@@ -67,7 +67,7 @@ export const supportConversationMessagesTable = pgTable(
     body: text("body").notNull(),
     sentiment: text("sentiment", { enum: ["positive", "neutral", "negative"] }),
     providerMessageId: text("provider_message_id"),
-    /** Who actually wrote an outbound message — Lisa (or an automated trigger) vs a staff member typing into the reply box. Null on inbound (always the customer). */
+    /** Who actually wrote an outbound message — Mia (or an automated trigger) vs a staff member typing into the reply box. Null on inbound (always the customer). */
     sentBy: text("sent_by", { enum: ["ai", "staff"] }),
     /** Which staff member actually sent it — set only when sentBy is "staff". Denormalized (not an FK), same convention as customer_notes.authorEmail, so history reads correctly even if the account is later renamed/disabled. */
     sentByStaffEmail: text("sent_by_staff_email"),

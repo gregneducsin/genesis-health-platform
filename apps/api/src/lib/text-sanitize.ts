@@ -1,6 +1,6 @@
 /**
  * Strips em dashes and en dashes from AI-drafted text — the SMS-style
- * prompts for both Joy and Lisa already instruct the model not to use
+ * prompts for both Chris and Mia already instruct the model not to use
  * them ("Use a comma or a new sentence instead"), but a prompt instruction
  * is never a guarantee. This is the code-level backstop applied to every
  * outbound reply/nextQuestion right after the provider response is

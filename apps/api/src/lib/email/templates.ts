@@ -613,7 +613,7 @@ export function renderPaymentFailedRecurringEmail(firstName: string, unsubscribe
  * `ctaUrl` must be a freshly-minted per-lead intake link (createIntakeLink
  * with promo "first_month_20"), not the bare Bask questionnaire URL —
  * clicking it is what arms the 2-hour follow-up job (see
- * intake-links.service.ts's handleIntakeLinkClick), same as the link Joy's
+ * intake-links.service.ts's handleIntakeLinkClick), same as the link Chris's
  * SMS conversation mints on action=send_form. A static, unminted link here
  * would silently skip that automation for every email-driven signup.
  */
@@ -1009,7 +1009,7 @@ export function renderAbandonedCartPlanComparisonEmail(firstName: string, ctaUrl
   return { subject: "Which Genesis Health plan is right for you?", html };
 }
 
-/** Plain-reply wrapper for AI-drafted turn replies (Joy/Lisa email dispatch) — same wrapper, no fixed copy since the text itself is the guardrail-validated draft. */
+/** Plain-reply wrapper for AI-drafted turn replies (Chris/Mia email dispatch) — same wrapper, no fixed copy since the text itself is the guardrail-validated draft. */
 export function renderConversationReplyEmail(bodyText: string, unsubscribeUrl: string): string {
   const paragraphs = bodyText
     .split(/\n{2,}/)

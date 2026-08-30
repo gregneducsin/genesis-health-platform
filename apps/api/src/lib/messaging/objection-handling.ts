@@ -200,7 +200,7 @@ export function getObjectionScript(key: ObjectionKey): ObjectionScript | undefin
  * California's B.O.T. Act, Bus. & Prof. Code §17941; the EU AI Act's
  * transparency provisions) require a bot used to influence a purchase to
  * disclose, when directly asked, that it is not a human. This script must be
- * used verbatim — never rewritten to imply Lucy is human. It is not staged;
+ * used verbatim — never rewritten to imply Chris is human. It is not staged;
  * the same disclosure applies every time the question is asked.
  */
 export const AI_DISCLOSURE_SCRIPT: ObjectionStageScript & { readonly allowedParaphrase: false } = {

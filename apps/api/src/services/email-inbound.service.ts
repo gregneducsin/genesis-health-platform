@@ -3,8 +3,8 @@ import { simpleParser } from "mailparser";
 import { eq } from "drizzle-orm";
 import { db, customersTable, emailConversationsTable, supportEmailConversationsTable } from "@luma/db";
 import { recordWebhookEventIfNew, markWebhookEventProcessed, markWebhookEventFailed, caseInsensitiveEmailEq } from "./webhooks.service.js";
-import { processInboundEmail } from "./lucy-email-dispatch.service.js";
-import { processInboundSupportEmail } from "./sarah-email-dispatch.service.js";
+import { processInboundEmail } from "./chris-email-dispatch.service.js";
+import { processInboundSupportEmail } from "./mia-email-dispatch.service.js";
 import { recordAndClassifyUnmatchedEmail } from "./unmatched-inbound-email.service.js";
 import { htmlToPlainText } from "../lib/email/templates.js";
 import { logger } from "../lib/logger.js";
@@ -59,7 +59,7 @@ async function hasEmailConversation(personId: string): Promise<boolean> {
   return Boolean(row);
 }
 
-/** Routes to Sarah's email pipeline first if a support conversation already exists for this person, else Lucy's, else logs and does nothing. */
+/** Routes to Mia's email pipeline first if a support conversation already exists for this person, else Chris's, else logs and does nothing. */
 async function dispatchInboundEmail(personId: string, subject: string, bodyText: string, messageId: string | null, receivingAddress: string): Promise<void> {
   if (await hasSupportEmailConversation(personId)) {
     await processInboundSupportEmail(personId, subject, bodyText, messageId, receivingAddress);
@@ -69,7 +69,7 @@ async function dispatchInboundEmail(personId: string, subject: string, bodyText:
     await processInboundEmail(personId, subject, bodyText, messageId, undefined, receivingAddress);
     return;
   }
-  logger.warn({ personId }, "inbound email from a person with no Lucy or Sarah email conversation — no auto-reply sent");
+  logger.warn({ personId }, "inbound email from a person with no Chris or Mia email conversation — no auto-reply sent");
 }
 
 interface ImapMailbox {

@@ -1,5 +1,5 @@
 /**
- * Types for Sarah's (the post-purchase support bot) structured reply.
+ * Types for Mia's (the post-purchase support bot) structured reply.
  *
  * Deliberately free of SDK imports so this module is safe to import anywhere.
  * The Anthropic SDK must live exclusively in a provider module that is only
@@ -8,16 +8,16 @@
  * No database imports. No outbound messaging SDK imports.
  */
 
-export type SarahAction = "reply" | "pause" | "staff_review" | "no_reply";
+export type MiaAction = "reply" | "pause" | "staff_review" | "no_reply";
 
-export interface SarahInteractiveResult {
-  readonly action: SarahAction;
+export interface MiaInteractiveResult {
+  readonly action: MiaAction;
   readonly reply: string | null;
   readonly confidence: number;
   readonly detectedIntents: readonly string[];
-  /** Knowledge-catalog topic keys Sarah cited in her response. */
+  /** Knowledge-catalog topic keys Mia cited in her response. */
   readonly knowledgeTopicsUsed: readonly string[];
-  /** True when Sarah flagged the turn as requiring staff review. */
+  /** True when Mia flagged the turn as requiring staff review. */
   readonly requiresStaff: boolean;
   readonly safetyCodes: readonly string[];
   /**
@@ -33,13 +33,13 @@ export interface SarahInteractiveResult {
   readonly inboundSentiment: "positive" | "neutral" | "negative" | null;
 }
 
-export interface SarahPreviewMessage {
+export interface MiaPreviewMessage {
   readonly direction: "inbound" | "outbound";
   readonly body: string;
 }
 
-export interface SarahPreviewRequestBody {
-  readonly messages: readonly SarahPreviewMessage[];
+export interface MiaPreviewRequestBody {
+  readonly messages: readonly MiaPreviewMessage[];
   /** Live order-fulfillment facts — injected as ground truth, never guessed. */
   readonly orderState: {
     readonly prescriptionWritten: boolean;
@@ -49,7 +49,7 @@ export interface SarahPreviewRequestBody {
   };
   /**
    * True once the post-delivery review check-in has been sent this session —
-   * changes Sarah's goal from "answer questions" to "listen for a sentiment
+   * changes Mia's goal from "answer questions" to "listen for a sentiment
    * on the experience question and react accordingly."
    */
   readonly reviewRequested: boolean;

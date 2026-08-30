@@ -17,8 +17,8 @@ const ENV_KEYS = [
   "GOOGLE_WORKSPACE_SMTP_USER",
   "GOOGLE_WORKSPACE_SMTP_APP_PASSWORD",
   "GOOGLE_WORKSPACE_FROM_EMAIL",
-  "GOOGLE_WORKSPACE_LUCY_FROM_NAME",
-  "GOOGLE_WORKSPACE_SARAH_FROM_NAME",
+  "GOOGLE_WORKSPACE_CHRIS_FROM_NAME",
+  "GOOGLE_WORKSPACE_MIA_FROM_NAME",
   "GOOGLE_GMAIL_FROM_EMAIL",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
@@ -43,16 +43,16 @@ afterEach(() => {
 
 describe("getEmailProvider", () => {
   it("throws EmailProviderNotConfiguredError when EMAIL_PROVIDER is unset", () => {
-    expect(() => getEmailProvider("lucy")).toThrow(EmailProviderNotConfiguredError);
+    expect(() => getEmailProvider("chris")).toThrow(EmailProviderNotConfiguredError);
   });
 
   describe("gmail_api", () => {
     it("throws when required Google OAuth vars are missing", () => {
       process.env.EMAIL_PROVIDER = "gmail_api";
-      expect(() => getEmailProvider("lucy")).toThrow(/GOOGLE_GMAIL_FROM_EMAIL or GOOGLE_WORKSPACE_SMTP_USER.*GOOGLE_CLIENT_ID.*GOOGLE_CLIENT_SECRET.*GOOGLE_REDIRECT_URI.*GOOGLE_REFRESH_TOKEN/s);
+      expect(() => getEmailProvider("chris")).toThrow(/GOOGLE_GMAIL_FROM_EMAIL or GOOGLE_WORKSPACE_SMTP_USER.*GOOGLE_CLIENT_ID.*GOOGLE_CLIENT_SECRET.*GOOGLE_REDIRECT_URI.*GOOGLE_REFRESH_TOKEN/s);
     });
 
-    function configuredProvider(persona: "lucy" | "sarah" = "lucy") {
+    function configuredProvider(persona: "chris" | "mia" = "chris") {
       process.env.EMAIL_PROVIDER = "gmail_api";
       process.env.GOOGLE_WORKSPACE_SMTP_USER = "bot@example.com";
       process.env.GOOGLE_CLIENT_ID = "client-id";
@@ -63,8 +63,8 @@ describe("getEmailProvider", () => {
     }
 
     it("uses the Genesis Health persona display names by default", () => {
-      expect(configuredProvider("lucy").fromName).toBe("Joy at Genesis Health");
-      expect(configuredProvider("sarah").fromName).toBe("Lisa at Genesis Health");
+      expect(configuredProvider("chris").fromName).toBe("Chris at Genesis Health");
+      expect(configuredProvider("mia").fromName).toBe("Mia at Genesis Health");
     });
 
     it("sends an email and resolves with a messageId", async () => {

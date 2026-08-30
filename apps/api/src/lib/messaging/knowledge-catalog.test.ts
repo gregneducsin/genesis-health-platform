@@ -1,27 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { getPreviewEnabledTopics, getSarahEnabledTopics, getTopicByKey } from "./knowledge-catalog.js";
+import { getPreviewEnabledTopics, getMiaEnabledTopics, getTopicByKey } from "./knowledge-catalog.js";
 
-describe("Lucy/Sarah topic-list separation", () => {
-  it("Lucy's topic list excludes portal_help (a prospect has no portal account)", () => {
-    const lucyKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
-    expect(lucyKeys.has("portal_help")).toBe(false);
+describe("Chris/Mia topic-list separation", () => {
+  it("Chris's topic list excludes portal_help (a prospect has no portal account)", () => {
+    const chrisKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
+    expect(chrisKeys.has("portal_help")).toBe(false);
   });
 
-  it("Sarah's topic list includes portal_help", () => {
-    const sarahKeys = new Set(getSarahEnabledTopics().map((t) => t.key));
-    expect(sarahKeys.has("portal_help")).toBe(true);
+  it("Mia's topic list includes portal_help", () => {
+    const miaKeys = new Set(getMiaEnabledTopics().map((t) => t.key));
+    expect(miaKeys.has("portal_help")).toBe(true);
   });
 
-  it("Sarah's topic list uses how_luma_works_after_purchase, not the enrollment-oriented how_luma_works", () => {
-    const sarahKeys = new Set(getSarahEnabledTopics().map((t) => t.key));
-    expect(sarahKeys.has("how_luma_works_after_purchase")).toBe(true);
-    expect(sarahKeys.has("how_luma_works")).toBe(false);
+  it("Mia's topic list uses how_luma_works_after_purchase, not the enrollment-oriented how_luma_works", () => {
+    const miaKeys = new Set(getMiaEnabledTopics().map((t) => t.key));
+    expect(miaKeys.has("how_luma_works_after_purchase")).toBe(true);
+    expect(miaKeys.has("how_luma_works")).toBe(false);
   });
 
-  it("Lucy's topic list uses how_luma_works, not Sarah's post-purchase version", () => {
-    const lucyKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
-    expect(lucyKeys.has("how_luma_works")).toBe(true);
-    expect(lucyKeys.has("how_luma_works_after_purchase")).toBe(false);
+  it("Chris's topic list uses how_luma_works, not Mia's post-purchase version", () => {
+    const chrisKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
+    expect(chrisKeys.has("how_luma_works")).toBe(true);
+    expect(chrisKeys.has("how_luma_works_after_purchase")).toBe(false);
   });
 
   it("how_luma_works_after_purchase does not repeat the pre-purchase enrollment framing", () => {
@@ -43,19 +43,19 @@ describe("Lucy/Sarah topic-list separation", () => {
     expect(enrollment?.enabledForPreview).toBe(true);
   });
 
-  it("medication_onset_timeline and appetite_hunger_management are Sarah-only — approved and available to Sarah, but excluded from Lucy's topic list", () => {
-    const lucyKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
-    const sarahKeys = new Set(getSarahEnabledTopics().map((t) => t.key));
+  it("medication_onset_timeline and appetite_hunger_management are Mia-only — approved and available to Mia, but excluded from Chris's topic list", () => {
+    const chrisKeys = new Set(getPreviewEnabledTopics().map((t) => t.key));
+    const miaKeys = new Set(getMiaEnabledTopics().map((t) => t.key));
     for (const key of ["medication_onset_timeline", "appetite_hunger_management"]) {
       const topic = getTopicByKey(key);
       expect(topic?.legalStatus).toBe("approved");
       expect(topic?.clinicalStatus).toBe("approved");
-      expect(sarahKeys.has(key)).toBe(true);
-      expect(lucyKeys.has(key)).toBe(false);
+      expect(miaKeys.has(key)).toBe(true);
+      expect(chrisKeys.has(key)).toBe(false);
     }
   });
 
-  it("medication_onset_timeline and appetite_hunger_management avoid words Sarah's own post-check unconditionally rejects (dose/mg/side effect/symptom/diagnos/contraindicat)", () => {
+  it("medication_onset_timeline and appetite_hunger_management avoid words Mia's own post-check unconditionally rejects (dose/mg/side effect/symptom/diagnos/contraindicat)", () => {
     const forbidden = /\bdos(e|es|age|ages|ing)\b|\b\d+\s?mg\b|\bside.?effect|\bsymptom|\bdiagnos(e|is|ed|ing)\b|\bcontraindicat(e|ed|es|ing|ion|ions)\b/i;
     for (const key of ["medication_onset_timeline", "appetite_hunger_management"]) {
       const topic = getTopicByKey(key);

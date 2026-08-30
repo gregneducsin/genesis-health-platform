@@ -39,7 +39,7 @@ export async function sendMetaLeadOpener(personId: string): Promise<void> {
     const reason = err instanceof Error ? err.message : String(err);
     logger.warn({ personId, reason }, "meta-lead opener send failed");
     // Still logged for visibility even though the send failed — this is what
-    // Lucy's opener would have said, once a provider exists.
+    // Chris's opener would have said, once a provider exists.
     await appendMessage(conversation.id, "outbound", text, {});
   }
 }

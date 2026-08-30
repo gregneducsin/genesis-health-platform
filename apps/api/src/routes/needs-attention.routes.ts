@@ -4,7 +4,7 @@ import { requireRole } from "../middleware/requireAuth.js";
 import { requireCsrf } from "../middleware/csrf.js";
 
 const CHANNELS = new Set(["sms", "email"]);
-const PERSONAS = new Set(["lucy", "sarah"]);
+const PERSONAS = new Set(["chris", "mia"]);
 
 export function createNeedsAttentionRouter(): RouterType {
   const router: RouterType = Router();
@@ -25,7 +25,7 @@ export function createNeedsAttentionRouter(): RouterType {
         res.status(400).json({ error: "Invalid channel or persona." });
         return;
       }
-      const messages = await needsAttentionService.getNeedsAttentionMessages(channel as "sms" | "email", persona as "lucy" | "sarah", id as string);
+      const messages = await needsAttentionService.getNeedsAttentionMessages(channel as "sms" | "email", persona as "chris" | "mia", id as string);
       res.json({ messages });
     } catch (err) {
       next(err);
@@ -39,7 +39,7 @@ export function createNeedsAttentionRouter(): RouterType {
         res.status(400).json({ error: "Invalid channel or persona." });
         return;
       }
-      await needsAttentionService.clearNeedsAttentionItem(channel as "sms" | "email", persona as "lucy" | "sarah", id as string);
+      await needsAttentionService.clearNeedsAttentionItem(channel as "sms" | "email", persona as "chris" | "mia", id as string);
       res.json({ ok: true });
     } catch (err) {
       next(err);

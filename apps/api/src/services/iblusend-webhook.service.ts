@@ -2,8 +2,8 @@ import { eq, sql } from "drizzle-orm";
 import { db, customersTable, supportConversationsTable } from "@luma/db";
 import { ibluSendMessageReceivedDataSchema, type IbluSendWebhookEnvelope } from "@luma/shared";
 import { recordWebhookEventIfNew, markWebhookEventProcessed, markWebhookEventFailed } from "./webhooks.service.js";
-import { processInboundMessage } from "./lucy-dispatch.service.js";
-import { processInboundSupportMessage } from "./sarah-dispatch.service.js";
+import { processInboundMessage } from "./chris-dispatch.service.js";
+import { processInboundSupportMessage } from "./mia-dispatch.service.js";
 import { recordAndClassifyUnmatchedSms } from "./unmatched-inbound-sms.service.js";
 import { phoneMatchKey } from "../lib/phone.js";
 import { logger } from "../lib/logger.js";
@@ -34,12 +34,12 @@ async function hasSupportConversation(personId: string): Promise<boolean> {
  * ever gets created off a real purchase/order event (see
  * getOrCreateSupportConversation's callers in order-fulfillment.service.ts)
  * — its mere existence means this person is a customer, not just a lead, so
- * Lisa owns anything from them from that point on, even if Joy's
- * conversation is technically still open too. Falls back to Joy otherwise,
- * whether or not a Joy conversation already exists — findCustomerIdByPhone
+ * Mia owns anything from them from that point on, even if Chris's
+ * conversation is technically still open too. Falls back to Chris otherwise,
+ * whether or not a Chris conversation already exists — findCustomerIdByPhone
  * (the only way personId ever gets here) already confirms this is a real,
  * known customer/lead, not a stranger, so a first-ever inbound text from
- * them starts a Joy conversation the same way any other automated trigger
+ * them starts a Chris conversation the same way any other automated trigger
  * in this codebase creates one unattended (processInboundMessage calls
  * getOrCreateConversation itself). Staying silent here left a known
  * customer's real message unanswered for no reason other than nobody having

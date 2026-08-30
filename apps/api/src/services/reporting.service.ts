@@ -77,7 +77,7 @@ export interface MessageVolumeRow {
   readonly outbound: number;
 }
 
-/** All-time message counts, SMS (Lucy+Sarah combined) vs email (Lucy+Sarah combined), split by direction. */
+/** All-time message counts, SMS (Chris+Mia combined) vs email (Chris+Mia combined), split by direction. */
 export async function getMessageVolumeByChannel(): Promise<MessageVolumeRow[]> {
   const { rows } = await db.execute<{ channel: string; direction: string; count: string }>(sql`
     SELECT 'sms' AS channel, direction, count(*) AS count FROM conversation_messages GROUP BY direction
@@ -110,8 +110,8 @@ export interface ResponseTimeStats {
 
 /**
  * Average time from an inbound message to the next outbound message in the
- * same conversation, per channel (SMS = Lucy+Sarah combined, email =
- * Lucy+Sarah combined). Only counts outbound messages that directly follow
+ * same conversation, per channel (SMS = Chris+Mia combined, email =
+ * Chris+Mia combined). Only counts outbound messages that directly follow
  * an inbound one (via LAG partitioned by conversation) — an outbound
  * message following another outbound message (e.g. reply + follow-up
  * question sent as two messages) isn't itself a "response," so it's
@@ -138,7 +138,7 @@ async function responseTimeForTable(table: "conversation_messages" | "support_co
 }
 
 export async function getResponseTimeStats(): Promise<ResponseTimeStats[]> {
-  const [lucySms, sarahSms, lucyEmail, sarahEmail] = await Promise.all([
+  const [chrisSms, miaSms, chrisEmail, miaEmail] = await Promise.all([
     responseTimeForTable("conversation_messages"),
     responseTimeForTable("support_conversation_messages"),
     responseTimeForTable("email_conversation_messages"),
@@ -152,8 +152,8 @@ export async function getResponseTimeStats(): Promise<ResponseTimeStats[]> {
     return { avgSeconds: weightedSum / count, count };
   };
 
-  const sms = combine(lucySms, sarahSms);
-  const email = combine(lucyEmail, sarahEmail);
+  const sms = combine(chrisSms, miaSms);
+  const email = combine(chrisEmail, miaEmail);
 
   return [
     { channel: "sms", avgResponseSeconds: sms.avgSeconds, responseCount: sms.count },

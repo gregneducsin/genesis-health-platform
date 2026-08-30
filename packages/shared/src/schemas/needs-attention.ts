@@ -16,7 +16,7 @@ export const AI_DIDNT_UNDERSTAND_REASON =
 export const needsAttentionChannelSchema = z.enum(["sms", "email"]);
 export type NeedsAttentionChannel = z.infer<typeof needsAttentionChannelSchema>;
 
-export const needsAttentionPersonaSchema = z.enum(["lucy", "sarah"]);
+export const needsAttentionPersonaSchema = z.enum(["chris", "mia"]);
 export type NeedsAttentionPersona = z.infer<typeof needsAttentionPersonaSchema>;
 
 export const needsAttentionItemSchema = z.object({

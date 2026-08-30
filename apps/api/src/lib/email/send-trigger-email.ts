@@ -22,7 +22,7 @@ export type SendTriggerEmailResult =
  * Shared fail-soft send+log for the fixed, pre-approved trigger emails
  * (order received/shipped, prescription written, the abandoned-cart drip
  * sequence) — same DND-gated, log-and-continue-on-failure shape as every
- * lucy-email-dispatch.service.ts/sarah-email-dispatch.service.ts's own
+ * chris-email-dispatch.service.ts/mia-email-dispatch.service.ts's own
  * sendAndLog for AI-drafted replies. `appendMessage` is either
  * appendEmailMessage or appendSupportEmailMessage — both share this exact
  * signature, so one helper covers both channels' fixed-template sends
