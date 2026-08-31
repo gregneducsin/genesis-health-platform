@@ -29,7 +29,7 @@ import {
   handleOrderShipped,
   handlePaymentFailed,
 } from "./order-fulfillment.service.js";
-import { setCustomerSmsDnd, setCustomerEmailDnd } from "./dnd.service.js";
+import { setCustomerSmsDnd, setCustomerEmailDnd, silenceOtherLeadsSharingPhone } from "./dnd.service.js";
 import { notifySlack } from "../lib/slack.js";
 import { logger } from "../lib/logger.js";
 
@@ -299,6 +299,10 @@ export async function handleBaskOrderWebhook(payload: BaskOrderWebhookRequest): 
     // recurring — a refill is exactly as much fresh consent as a first order.
     await setCustomerSmsDnd(customerId, false);
     await setCustomerEmailDnd(customerId, false);
+    // The mirror image: any other, still-unpurchased lead sharing this same
+    // phone number stops getting marketing texts/emails — see
+    // silenceOtherLeadsSharingPhone's docstring.
+    await silenceOtherLeadsSharingPhone(customerId);
 
     // Mia's opening message fires the moment the order lands — instant,
     // same as the Meta lead opener, not a scheduled sweep. A genuine first
