@@ -1,7 +1,9 @@
 import { Router, type Router as RouterType } from "express";
+import { ZodError, type ZodIssue } from "zod";
 import { baskQuestionnaireWebhookRequestSchema, baskNativeQuestionnaireEnvelopeSchema, type BaskQuestionnaireWebhookRequest } from "@luma/shared";
 import { createWebhookAuth } from "../../middleware/webhookAuth.js";
 import { handleBaskQuestionnaireWebhook } from "../../services/webhooks.service.js";
+import { respondToInvalidWebhookPayload } from "../../lib/webhook-validation.js";
 
 /**
  * Maps Bask's native `type` field to our internal status. Only
@@ -13,7 +15,7 @@ const BASK_NATIVE_EVENT_TYPE_TO_STATUS: Record<string, "started" | "abandoned" |
   abandonedSession: "abandoned",
 };
 
-type ParsedPayload = { ok: true; data: BaskQuestionnaireWebhookRequest } | { ok: false; error: string; details?: unknown };
+type ParsedPayload = { ok: true; data: BaskQuestionnaireWebhookRequest } | { ok: false; error: ZodError };
 
 /**
  * Accepts either shape: Bask's own native `{ type, data }` webhook envelope
@@ -21,23 +23,29 @@ type ParsedPayload = { ok: true; data: BaskQuestionnaireWebhookRequest } | { ok:
  * Zapier relay in front of Bask sends (explicit status field, no wrapper).
  * Disambiguated by the presence of a top-level `type` string, since that's
  * not a field either shape otherwise uses at the top level.
+ *
+ * All three failure branches surface as a ZodError (an unrecognized event
+ * type gets one synthesized) so every rejection — not just a schema
+ * mismatch — goes through respondToInvalidWebhookPayload and shows up on
+ * the portal's Webhook Log page.
  */
 function parseBaskQuestionnairePayload(body: unknown): ParsedPayload {
   if (typeof body === "object" && body !== null && "type" in body) {
     const envelope = baskNativeQuestionnaireEnvelopeSchema.safeParse(body);
     if (!envelope.success) {
-      return { ok: false, error: "Invalid payload.", details: envelope.error.issues };
+      return { ok: false, error: envelope.error };
     }
     const status = BASK_NATIVE_EVENT_TYPE_TO_STATUS[envelope.data.type];
     if (!status) {
-      return { ok: false, error: `Unrecognized Bask event type: "${envelope.data.type}".` };
+      const issue: ZodIssue = { code: "custom", path: ["type"], message: `Unrecognized Bask event type: "${envelope.data.type}".` };
+      return { ok: false, error: new ZodError([issue]) };
     }
     return { ok: true, data: { ...envelope.data.data, status } };
   }
 
   const flat = baskQuestionnaireWebhookRequestSchema.safeParse(body);
   if (!flat.success) {
-    return { ok: false, error: "Invalid payload.", details: flat.error.issues };
+    return { ok: false, error: flat.error };
   }
   return { ok: true, data: flat.data };
 }
@@ -50,7 +58,7 @@ export function createBaskQuestionnaireWebhookRouter(): RouterType {
     try {
       const parsed = parseBaskQuestionnairePayload(req.body);
       if (!parsed.ok) {
-        res.status(400).json({ error: parsed.error, details: parsed.details });
+        await respondToInvalidWebhookPayload("bask_questionnaire", req, res, parsed.error);
         return;
       }
       const result = await handleBaskQuestionnaireWebhook(parsed.data);
