@@ -10,7 +10,7 @@ import { sweepObjectionReengagementTriggers } from "./services/objection-reengag
 import { sweepAbandonedCartEmailTriggers } from "./services/abandoned-cart-email.service.js";
 import { sweepMetaLeadEmailTriggers } from "./services/meta-lead-email.service.js";
 import { sweepInboundEmail } from "./services/email-inbound.service.js";
-import { notifySlack } from "./lib/slack.js";
+import { notifySlack, notifySmsSlack } from "./lib/slack.js";
 
 // Migrations are applied as a discrete step before this process starts (see
 // packages/db/src/migrate.ts's docstring, the Dockerfile entrypoint, and the
@@ -31,7 +31,7 @@ const FOLLOW_UP_SWEEP_INTERVAL_MS = 10 * 60 * 1000;
 setInterval(() => {
   sweepFollowUpJobs().catch((err) => {
     logger.error({ err }, "follow-up job sweep failed");
-    void notifySlack(`Follow-up job sweep failed: ${err instanceof Error ? err.message : String(err)}`);
+    void notifySmsSlack(`Follow-up job sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, FOLLOW_UP_SWEEP_INTERVAL_MS);
 
@@ -42,7 +42,7 @@ const ABANDONED_CART_SWEEP_INTERVAL_MS = 2 * 60 * 1000;
 setInterval(() => {
   sweepAbandonedCartTriggers().catch((err) => {
     logger.error({ err }, "abandoned-cart opener sweep failed");
-    void notifySlack(`Abandoned-cart opener sweep failed: ${err instanceof Error ? err.message : String(err)}`);
+    void notifySmsSlack(`Abandoned-cart opener sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, ABANDONED_CART_SWEEP_INTERVAL_MS);
 
@@ -58,7 +58,7 @@ const LEAD_CHECKIN_SWEEP_INTERVAL_MS = 30 * 60 * 1000;
 setInterval(() => {
   sweepLeadCheckinTriggers().catch((err) => {
     logger.error({ err }, "lead check-in sweep failed");
-    void notifySlack(`Lead check-in sweep failed: ${err instanceof Error ? err.message : String(err)}`);
+    void notifySmsSlack(`Lead check-in sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, LEAD_CHECKIN_SWEEP_INTERVAL_MS);
 
@@ -68,7 +68,7 @@ const OBJECTION_REENGAGEMENT_SWEEP_INTERVAL_MS = 30 * 60 * 1000;
 setInterval(() => {
   sweepObjectionReengagementTriggers().catch((err) => {
     logger.error({ err }, "objection re-engagement sweep failed");
-    void notifySlack(`Objection re-engagement sweep failed: ${err instanceof Error ? err.message : String(err)}`);
+    void notifySmsSlack(`Objection re-engagement sweep failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 }, OBJECTION_REENGAGEMENT_SWEEP_INTERVAL_MS);
 
